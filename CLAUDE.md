@@ -7,7 +7,7 @@ Agent files in English; DECISIONS, ROADMAP, ITERATIONS, experiment reports are R
 
 ## What this is
 
-A non-commercial, Apple-native photo editor built on "harmonic colour thinking" (working title; no name yet).
+A non-commercial, Apple-native photo editor built on "harmonic colour thinking" (working name: **Accordion**, set by Alexey 2026-10-13; workspace tag/folder stay `color_harmony`).
 Colour is edited through relations between colours, not presets or neural filters: neutrals are hard reference
 points, skin is a soft one, complementary pairs and chords rotate together on a colour wheel, the tool explains itself.
 Today: a browser prototype «Комплементарный круг» (`prototype/complement.html`, published as a claude.ai artifact) and a
@@ -47,4 +47,4 @@ Next: a transferable colour «recipe» (a film/scanner "school" as hue-dependent
   `data/derived/`. The repo may become public (ws rule 28) — assume it is.
 - **Pins never fold hues** (`prototype/tests/fold.js` is the guard). Don't touch the hue-map maths without running it.
 - Gamut mapping, LUT export (.cube in a stored ZIP — the `downloads` capability allows only zip), history/undo: don't rewrite unasked.
-- No git remote yet. Push/publish only after Alexey says so (record it in `INDEX.md`).
+- Remote: https://github.com/alexeynovopashin-lab/accordion (public). Push/publish only after Alexey says so (record it in `INDEX.md`).
