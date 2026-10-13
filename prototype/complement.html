@@ -1,0 +1,1231 @@
+<title>Комплементарный круг</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: neutral-grey colour bench — a mid-grey stage for the photo on the left, an instrument column (OkLab wheel, readout, controls) on the right; stacks to one column below 980px. Neutrals are deliberately achromatic so the UI never biases colour judgement. */
+:root{
+  --bg:#ebebeb;
+  --panel:#f6f6f6;
+  --fg:#1a1a1a;
+  --muted:#626262;
+  --line:#d0d0d0;
+  --stage:#777777;
+  --on-stage:#f5f5f5;
+  --ink-inv:#f6f6f6;
+  --font-ui:"Golos Text", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-data:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1c1c1c; --panel:#242424; --fg:#e8e8e8; --muted:#9a9a9a; --line:#383838;
+    --stage:#575757; --on-stage:#f2f2f2; --ink-inv:#1c1c1c; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1c1c1c; --panel:#242424; --fg:#e8e8e8; --muted:#9a9a9a; --line:#383838;
+  --stage:#575757; --on-stage:#f2f2f2; --ink-inv:#1c1c1c; color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--font-ui);font-size:14px;line-height:1.45}
+.wrap{max-width:1440px;margin:0 auto;padding-block:20px 32px;padding-inline:16px;display:grid;gap:16px}
+header{display:grid;gap:4px}
+h1{font-size:20px;font-weight:600;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.lead{margin:0;color:var(--muted);max-width:72ch}
+.main{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+@media (min-width:980px){.main{grid-template-columns:minmax(0,1fr) 380px}}
+.stage{background:var(--stage);border-radius:6px;display:flex;flex-direction:column;min-width:0}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:10px;align-items:center;color:var(--on-stage)}
+.toolbar .lbl{font-size:12px;opacity:.85;margin-left:4px}
+.canvas-box{display:flex;margin:0 12px 12px;min-height:240px;max-height:min(78vh,940px);overflow:auto;overscroll-behavior:contain}
+#img{display:block;margin:auto;max-width:100%;max-height:min(74vh,900px);width:auto;height:auto;cursor:crosshair;flex:none}
+#img.zoomed{max-width:none;max-height:none}
+#img.zoomed.px{image-rendering:pixelated}
+#img.panning{cursor:grabbing}
+.zoombar{display:flex;align-items:center;gap:6px;margin-left:auto}
+.zoombar .zv{font-family:var(--font-data);font-size:12px;min-width:46px;text-align:center}
+.foldbar{display:flex;gap:8px;justify-content:flex-end}
+.foldbar .btn{padding:4px 9px;font-size:12px}
+.panel>h2.fold{cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.panel>h2.fold::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin-top:-3px;transition:transform .15s;flex:none}
+.panel>h2.fold:focus-visible{outline:2px solid var(--fg);outline-offset:3px;border-radius:3px}
+.panel.collapsed{gap:0}
+.panel.collapsed>:not(h2){display:none}
+.panel.collapsed>h2.fold::after{transform:rotate(-45deg);margin-top:0}
+.status{font-family:var(--font-data);font-size:12px;color:var(--on-stage);padding:0 12px 12px;min-height:18px;opacity:.9}
+.side{display:grid;gap:12px;align-content:start;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;display:grid;gap:12px;min-width:0}
+.panel h2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0}
+#wheel{width:100%;max-width:352px;aspect-ratio:1/1;display:block;margin:0 auto;touch-action:none;cursor:grab}
+.legend{font-size:12px;color:var(--muted);margin:0}
+.readout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
+.cell{display:grid;gap:1px;min-width:0}
+.cell span{font-size:11px;color:var(--muted)}
+.cell b{font-family:var(--font-data);font-weight:500;font-size:14px;font-variant-numeric:tabular-nums}
+.verdict{display:flex;align-items:center;gap:8px;font-size:13px}
+.dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--fg);flex:none}
+.dot.ok{background:var(--fg)}
+.dot.near{background:linear-gradient(90deg,var(--fg) 50%,transparent 50%)}
+.slider{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center}
+.slider label{font-size:13px}
+.slider output{font-family:var(--font-data);font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.slider input[type=range]{grid-column:1/-1;width:100%;margin:2px 0;accent-color:var(--fg)}
+.seg{display:flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.seg button{flex:1;background:transparent;border:0;border-right:1px solid var(--line);padding:7px 8px;color:var(--fg);font:inherit;font-size:13px;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--ink-inv)}
+.stage .seg{border-color:rgba(255,255,255,.35)}
+.stage .seg button{color:var(--on-stage);border-right-color:rgba(255,255,255,.35)}
+.stage .seg button[aria-pressed="true"]{background:var(--on-stage);color:#333}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:5px;padding:7px 11px;font:inherit;font-size:13px;cursor:pointer}
+.btn.primary{background:var(--fg);color:var(--ink-inv);border-color:var(--fg)}
+.btn:disabled{opacity:.45;cursor:default}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.check{display:flex;align-items:center;gap:8px;font-size:13px}
+.check input{accent-color:var(--fg);width:16px;height:16px}
+.note{font-size:12px;color:var(--muted);margin:0}
+.file{position:relative;overflow:hidden}
+.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.stage :focus-visible{outline-color:var(--on-stage)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.left{display:grid;gap:12px;align-content:start;min-width:0}
+.tablebox{overflow-x:auto}
+.mtable{width:100%;border-collapse:collapse;font-family:var(--font-data);font-size:12px;font-variant-numeric:tabular-nums}
+.mtable th{font-family:var(--font-ui);font-weight:500;color:var(--muted);text-align:left;padding:4px 8px 6px;font-size:11px}
+.mtable td{padding:6px 8px;border-top:1px solid var(--line);white-space:nowrap;vertical-align:top}
+.mtable td:first-child{font-family:var(--font-ui);font-size:13px}
+.mtable .dim{color:var(--muted)}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stage .seg.wrapseg{flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 10px;font-size:12px;background:var(--bg)}
+.chip button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:14px;line-height:1;cursor:pointer;padding:0 6px;border-radius:999px}
+.chip button:hover{color:var(--fg)}
+.sub{font-size:12px;font-weight:600;margin:0}
+.kv{font-family:var(--font-data);font-size:12px;font-variant-numeric:tabular-nums;margin:0;display:grid;gap:3px}
+.kv span{color:var(--muted);font-family:var(--font-ui)}
+.target{display:flex;align-items:center;gap:8px;font-size:13px;flex-wrap:wrap}
+.target input{width:58px;font:inherit;font-family:var(--font-data);font-size:13px;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}
+.lvl{display:grid;gap:2px;border:1px solid var(--line);border-radius:5px;padding:8px}
+.lvl span{font-size:11px;color:var(--muted)}
+.lvl b{font-family:var(--font-data);font-weight:500;font-size:12px;font-variant-numeric:tabular-nums}
+.lvl .dot{width:10px;height:10px}
+.lvl .head{display:flex;align-items:center;gap:6px}
+hr.sep{border:0;border-top:1px solid var(--line);margin:0}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Комплементарный круг</h1>
+    <p class="lead">Два шага. Нормализация: маркеры на нейтралях задают свет, маркер кожи — её тон и насыщенность, каждое отдельно. Гармония: основная нота и противоположные ей цвета двигаются вместе по кругу OkLab, а маркеры кожи, губ, неба и листвы держат свои цвета. Пример: ваш тестовый портрет с мишенью, маркеры уже расставлены.</p>
+  </header>
+
+  <div class="main">
+    <div class="left">
+    <section class="stage" aria-label="Снимок">
+      <div class="toolbar">
+        <label class="btn file">Загрузить снимок<input id="fileIn" type="file" accept="image/jpeg,image/png,image/webp"></label>
+        <div class="seg" role="group" aria-label="Показ">
+          <button id="vBefore" type="button" aria-pressed="false">До</button>
+          <button id="vAfter" type="button" aria-pressed="true">После</button>
+        </div>
+        <button class="btn" id="tClouds" type="button" aria-pressed="false">Облака маркеров</button>
+        <button class="btn" id="undo" type="button" title="Cmd/Ctrl+Z" disabled>← Назад</button>
+        <button class="btn" id="redo" type="button" title="Shift+Cmd/Ctrl+Z" disabled>Вперёд →</button>
+        <button class="btn" id="resetAll" type="button" title="Все регуляторы к исходным значениям, маркеры убираются. Отменяется кнопкой «Назад».">Сбросить всё</button>
+        <button class="btn primary" id="saveJpg" type="button" hidden>Сохранить снимок</button>
+      </div>
+      <div class="toolbar" style="padding-top:0">
+        <span class="lbl">Щелчок ставит:</span>
+        <div class="seg wrapseg" role="group" aria-label="Что ставит щелчок по снимку">
+          <button id="pBase" type="button" aria-pressed="true">Ноту</button>
+          <button id="pNeutral" type="button" aria-pressed="false">Нейтраль</button>
+          <button id="pSkin" type="button" aria-pressed="false">Кожу</button>
+          <button id="pLips" type="button" aria-pressed="false">Губы</button>
+          <button id="pSky" type="button" aria-pressed="false">Небо</button>
+          <button id="pFoliage" type="button" aria-pressed="false">Листву</button>
+          <button id="pHold" type="button" aria-pressed="false">Цвет</button>
+        </div>
+        <div class="zoombar" role="group" aria-label="Масштаб снимка">
+          <button class="btn" id="zOut" type="button" title="Уменьшить">−</button>
+          <span class="zv" id="zVal">100%</span>
+          <button class="btn" id="zIn" type="button" title="Увеличить">+</button>
+          <button class="btn" id="zFit" type="button" title="Весь кадр в окне">По размеру</button>
+          <button class="btn" id="zOne" type="button" title="1 пиксель превью = 1 пиксель экрана">1:1</button>
+        </div>
+      </div>
+      <div class="canvas-box"><canvas id="img" aria-label="Снимок; щелчок задаёт ноту или ставит маркер"></canvas></div>
+      <div class="status" id="status" aria-live="polite"></div>
+    </section>
+    <section class="panel" aria-label="Замеры">
+      <h2>Замеры: исходно → нормализация → итог</h2>
+      <div class="tablebox"><table class="mtable">
+        <thead><tr><th>Облако</th><th>Исходно</th><th>После нормализации</th><th>Итог с аккордом</th></tr></thead>
+        <tbody id="mBody"><tr><td colspan="4" class="dim">Нет маркеров.</td></tr></tbody>
+      </table></div>
+      <p class="note">Lab D50, как в Photoshop: медианы по облаку маркера. Для кожи — её светлая четверть (те же пиксели во всех трёх столбцах). Нейтрали и «цвет» — по каждому маркеру отдельно.</p>
+    </section>
+    </div>
+
+    <aside class="side">
+      <div class="foldbar"><button class="btn" id="foldAll" type="button">Свернуть все</button><button class="btn" id="unfoldAll" type="button">Развернуть все</button></div>
+      <section class="panel" aria-label="Нормализация">
+        <h2>1 · Нормализация</h2>
+        <div class="chips" id="chips"></div>
+        <p class="note" id="chipsNote">Маркеров нет. Выберите тип над снимком и щёлкните по предмету. Маркеры одного типа складываются в одно облако.</p>
+
+        <hr class="sep">
+        <p class="sub">Свет — по нейтралям</p>
+        <div class="slider"><label for="sWb">Баланс по нейтралям</label><output id="oWb"></output><input id="sWb" type="range" min="0" max="1" step="0.05"></div>
+        <div class="kv" id="wbInfo"><span>—</span></div>
+
+        <hr class="sep">
+        <p class="sub">Кожа — тон и насыщенность отдельно</p>
+        <div class="target">Цель на светлой части:
+          <label>a <input id="tA" type="number" step="0.5" min="0" max="40"></label>
+          <label>b <input id="tB" type="number" step="0.5" min="0" max="40"></label>
+          <output id="oTarget" class="note"></output>
+        </div>
+        <div class="kv" id="skinInfo"><span>—</span></div>
+        <div class="grid2">
+          <div class="slider"><label for="sSkinCf">Насыщенность кожи</label><output id="oSkinCf"></output><input id="sSkinCf" type="range" min="0.5" max="1.5" step="0.01"></div>
+          <div class="slider"><label for="sSkinDh">Тон кожи</label><output id="oSkinDh"></output><input id="sSkinDh" type="range" min="-15" max="15" step="0.5"></div>
+        </div>
+        <div class="btns">
+          <button class="btn primary" id="skinToTarget" type="button">Кожу к цели</button>
+          <button class="btn" id="skinReset" type="button">Сбросить кожу</button>
+        </div>
+        <p class="note" id="wbOnly">—</p>
+
+        <hr class="sep">
+        <p class="sub">Реперные нейтрали в итоге</p>
+        <div class="grid3">
+          <div class="lvl"><div class="head"><span class="dot" id="dBlack"></span><span>Чёрное, L&lt;20</span></div><b id="lBlack">—</b></div>
+          <div class="lvl"><div class="head"><span class="dot" id="dGrey"></span><span>Серое</span></div><b id="lGrey">—</b></div>
+          <div class="lvl"><div class="head"><span class="dot" id="dWhite"></span><span>Белое, L&gt;75</span></div><b id="lWhite">—</b></div>
+        </div>
+        <p class="note">Доля кадра с насыщенностью ниже 8 (Lab) и медианный оттенок этих пикселей. Закрашенная точка: уровень есть и чист (отклонение меньше 2.5).</p>
+      </section>
+
+      <section class="panel" aria-label="Круг">
+        <h2>Круг · основная нота</h2>
+        <canvas id="wheel" aria-label="Цветовой круг OkLab: щелчок или перетаскивание задаёт основную ноту"></canvas>
+        <p class="legend">Точки — цвета снимка. Сплошной контур — предел sRGB, пунктир — Display P3. Секторы — закреплённые облака маркеров (пунктирный сектор — зона кожи по вашей таблице обложек, пока нет маркера кожи). Перетаскивайте по кругу, чтобы задать основную ноту.</p>
+        <div class="readout">
+          <div class="cell"><span>Кожа</span><b id="rSkin">—</b></div>
+          <div class="cell"><span>Ось напротив кожи</span><b id="rAxis">—</b></div>
+          <div class="cell"><span>Масса напротив: до → после</span><b id="rMass">—</b></div>
+          <div class="cell"><span>Интервал кожа ↔ масса</span><b id="rInt">—</b></div>
+        </div>
+        <div class="verdict"><span class="dot" id="vDot"></span><span id="vText">—</span></div>
+        <div class="btns">
+          <button class="btn primary" id="align" type="button">Свести с кожей</button>
+          <button class="btn" id="reset" type="button">Сбросить движения</button>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Аккорд">
+        <h2>Аккорд</h2>
+        <div class="seg" role="group" aria-label="Схема">
+          <button id="mPair" type="button" aria-pressed="true">Пара</button>
+          <button id="mSplit" type="button" aria-pressed="false">Расщеплённая</button>
+          <button id="mTriad" type="button" aria-pressed="false">Триада</button>
+        </div>
+        <div class="slider"><label for="sBase">Основная нота</label><output id="oBase"></output><input id="sBase" type="range" min="0" max="359" step="1"></div>
+      </section>
+
+      <section class="panel" aria-label="Движение">
+        <h2>Движение</h2>
+        <div class="slider"><label for="sRotAll">Поворот всего аккорда</label><output id="oRotAll"></output><input id="sRotAll" type="range" min="-60" max="60" step="1"></div>
+        <div class="slider"><label for="sRotOpp">Сдвиг противоположной ноты</label><output id="oRotOpp"></output><input id="sRotOpp" type="range" min="-60" max="60" step="1"></div>
+        <div class="slider"><label for="sSpread">Раскрытие вокруг оси</label><output id="oSpread"></output><input id="sSpread" type="range" min="-30" max="30" step="1"></div>
+        <div class="grid2">
+          <div class="slider"><label for="sCore">Ядро зоны</label><output id="oCore"></output><input id="sCore" type="range" min="6" max="40" step="1"></div>
+          <div class="slider"><label for="sFall">Затухание</label><output id="oFall"></output><input id="sFall" type="range" min="10" max="60" step="1"></div>
+        </div>
+      </section>
+
+      <section class="panel" aria-label="Закрепления">
+        <h2>Закрепления</h2>
+        <div class="slider"><label for="sNeutral">Нейтрали: порог насыщенности</label><output id="oNeutral"></output><input id="sNeutral" type="range" min="0" max="0.06" step="0.002"></div>
+        <label class="check"><input id="cSkin" type="checkbox"> Держать цвета маркеров (кожа, губы, небо, листва)</label>
+        <div class="slider"><label for="sSkinStr">Сила закреплений</label><output id="oSkinStr"></output><input id="sSkinStr" type="range" min="0" max="1" step="0.05"></div>
+        <div class="kv" id="pinInfo"><span>—</span></div>
+        <p class="note">Без маркера кожи действует зона кожи по вашей таблице обложек (48° OkLCh ±8°). Строки выше: на сколько аккорд сдвигает цвет маркера и сколько из этого сдвига закрепление гасит.</p>
+      </section>
+
+      <section class="panel" aria-label="Экспорт">
+        <h2>Экспорт</h2>
+        <div class="grid2">
+          <div class="seg" role="group" aria-label="Пространство LUT">
+            <button id="spS" type="button" aria-pressed="true">sRGB</button>
+            <button id="spP" type="button" aria-pressed="false">Display P3</button>
+          </div>
+          <div class="seg" role="group" aria-label="Размер LUT">
+            <button id="n33" type="button" aria-pressed="false">33</button>
+            <button id="n65" type="button" aria-pressed="true">65</button>
+          </div>
+        </div>
+        <div class="btns">
+          <button class="btn primary" id="saveLut" type="button">LUT (.cube в .zip)</button>
+          <button class="btn" id="savePng" type="button">Снимок (.png)</button>
+          <button class="btn" id="copyLut" type="button" hidden>Скопировать LUT как текст</button>
+        </div>
+        <p class="note" id="exportNote">LUT рассчитан на снимок в выбранном пространстве. Для Lightroom его встраивают в творческий профиль через Camera Raw в Photoshop; Resolve и Photoshop открывают .cube напрямую.</p>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const DEMO_SRC = "__DEMO_IMG__";
+
+/* ---------- state ---------- */
+const P = { mode:"pair", base:48, rotAll:0, rotOpp:0, spread:0, core:18, fall:30,
+  neutral:0.024, skinLock:true, skinStr:1, skinH:48, skinW:8,
+  wb:1, tA:12, tB:15, skinCf:1, skinDh:0, clouds:false,
+  space:"srgb", size:65, view:"after", pick:"base" };
+const TYPES = {
+  neutral:{ name:"нейтраль", tolL:0.07, tolAB:0.010 },
+  skin:   { name:"кожа",     tolL:0.09, tolAB:0.018 },
+  lips:   { name:"губы",     tolL:0.09, tolAB:0.022 },
+  sky:    { name:"небо",     tolL:0.10, tolAB:0.018 },
+  foliage:{ name:"листва",   tolL:0.12, tolAB:0.028 },
+  hold:   { name:"цвет",     tolL:0.10, tolAB:0.022 }
+};
+const PIN_TYPES = ["skin","lips","sky","foliage","hold"];
+let markers = [];      // {type, x, y, idx:Int32Array}
+let NM = null;         // normalisation state, rebuilt by prepNorm()
+let PINS = [];         // harmony pins, rebuilt by prepPins()
+const DEFAULTS = Object.assign({}, P);
+const MODE_S = { pair:0, split:30, triad:60 };
+
+/* ---------- colour maths (OkLab, Björn Ottosson) ---------- */
+const toLin = c => c <= 0.04045 ? c/12.92 : Math.pow((c+0.055)/1.055, 2.4);
+const toEnc = c => c <= 0.0031308 ? 12.92*c : 1.055*Math.pow(c, 1/2.4) - 0.055;
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const P3toS = [[1.2247453,-0.2249044,0],[-0.042058,1.0420809,0],[-0.0196423,-0.0786549,1.0985372]];
+const StoP3 = [[0.8225929,0.1775339,0],[0.0331995,0.9667835,0],[0.0170854,0.0723957,0.9103014]];
+const mul = (M,v) => [M[0][0]*v[0]+M[0][1]*v[1]+M[0][2]*v[2], M[1][0]*v[0]+M[1][1]*v[1]+M[1][2]*v[2], M[2][0]*v[0]+M[2][1]*v[1]+M[2][2]*v[2]];
+function linToOklab(r,g,b){
+  const l = Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b);
+  const m = Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b);
+  const s = Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+  return [0.2104542553*l+0.7936177850*m-0.0040720468*s, 1.9779984951*l-2.4285922050*m+0.4505937099*s, 0.0259040371*l+0.7827717662*m-0.8086757660*s];
+}
+function oklabToLin(L,a,b){
+  const l_=L+0.3963377774*a+0.2158037573*b, m_=L-0.1055613458*a-0.0638541728*b, s_=L-0.0894841775*a-1.2914855480*b;
+  const l=l_*l_*l_, m=m_*m_*m_, s=s_*s_*s_;
+  return [4.0767416621*l-3.3077115913*m+0.2309699292*s, -1.2684380046*l+2.6097574011*m-0.3413193965*s, -0.0041960863*l-0.7034186147*m+1.7076147010*s];
+}
+const D2R = Math.PI/180;
+function lchLin(L,C,h,space){ let v = oklabToLin(L, C*Math.cos(h*D2R), C*Math.sin(h*D2R)); if (space==="p3") v = mul(StoP3, v); return v; }
+const inG = v => v[0]>=-1e-5 && v[0]<=1+1e-5 && v[1]>=-1e-5 && v[1]<=1+1e-5 && v[2]>=-1e-5 && v[2]<=1+1e-5;
+function mapToGamut(L,C,h,space){
+  let v = lchLin(L,C,h,space);
+  if (inG(v)) return v;
+  let lo = 0, hi = C;
+  for (let i=0;i<14;i++){ const mid=(lo+hi)/2; if (inG(lchLin(L,mid,h,space))) lo=mid; else hi=mid; }
+  return lchLin(L,lo,h,space);
+}
+const wrap = h => ((h%360)+360)%360;
+const angDiff = (a,b) => ((a-b+540)%360)-180;
+const smooth = t => t<=0 ? 0 : t>=1 ? 1 : t*t*(3-2*t);
+const weight = (d, core, fall) => { const ad=Math.abs(d); return ad<=core ? 1 : ad>=core+fall ? 0 : 1-smooth((ad-core)/fall); };
+function rgbToLch(r,g,b){ const [L,a,bb] = linToOklab(toLin(r),toLin(g),toLin(b)); return { L, C:Math.hypot(a,bb), h:wrap(Math.atan2(bb,a)/D2R) }; }
+
+/* ---------- Lab D50 readouts (Photoshop convention) and white balance ---------- */
+const S2X = [[0.4124564,0.3575761,0.1804375],[0.2126729,0.7151522,0.0721750],[0.0193339,0.1191920,0.9503041]];
+const BRAD = [[0.8951,0.2664,-0.1614],[-0.7502,1.7135,0.0367],[0.0389,-0.0685,1.0296]];
+const D65toD50 = [[1.0478112,0.0228866,-0.0501270],[0.0295424,0.9904844,-0.0170491],[-0.0092345,0.0150436,0.7521316]];
+function mm(A,B){ const R=[[0,0,0],[0,0,0],[0,0,0]]; for (let i=0;i<3;i++) for (let j=0;j<3;j++) for (let k=0;k<3;k++) R[i][j]+=A[i][k]*B[k][j]; return R; }
+function inv3(m){
+  const [a,b,c]=m[0],[d,e,f]=m[1],[g,h,i]=m[2];
+  const A=e*i-f*h, B=-(d*i-f*g), C=d*h-e*g, det=a*A+b*B+c*C;
+  return [[A/det,-(b*i-c*h)/det,(b*f-c*e)/det],[B/det,(a*i-c*g)/det,-(a*f-c*d)/det],[C/det,-(a*h-b*g)/det,(a*e-b*d)/det]];
+}
+const S2B = mm(BRAD, S2X), B2S = inv3(S2B);
+const fLab = t => t > 216/24389 ? Math.cbrt(t) : (24389/27*t+16)/116;
+function labD50(v){
+  const x = mul(D65toD50, mul(S2X, v));
+  const fx=fLab(x[0]/0.96422), fy=fLab(x[1]), fz=fLab(x[2]/0.82521);
+  return [116*fy-16, 500*(fx-fy), 200*(fy-fz)];
+}
+/* von Kries in Bradford cone space: the neutral's colour is treated as a change of light, not as a Lab offset */
+function wbMatrix(n, k){
+  const Y = S2X[1][0]*n[0]+S2X[1][1]*n[1]+S2X[1][2]*n[2];
+  const src = mul(S2B, n), dst = mul(S2B, [Y,Y,Y]);
+  const g = [0,1,2].map(i => Math.pow(dst[i]/Math.max(src[i],1e-6), k));
+  return mm(B2S, mm([[g[0],0,0],[0,g[1],0],[0,0,g[2]]], S2B));
+}
+
+/* ---------- markers: clouds of similar pixels grown from a click ---------- */
+let SL=null, SA=null, SB=null;
+function prepSource(){
+  const d = srcData.data, n = d.length/4;
+  SL = new Float32Array(n); SA = new Float32Array(n); SB = new Float32Array(n);
+  const lut = new Float32Array(256); for (let i=0;i<256;i++) lut[i]=toLin(i/255);
+  for (let i=0,p=0;i<n;i++,p+=4){ const o = linToOklab(lut[d[p]],lut[d[p+1]],lut[d[p+2]]); SL[i]=o[0]; SA[i]=o[1]; SB[i]=o[2]; }
+}
+function grow(x, y, type){
+  const W = imgCv.width, H = imgCv.height, t = TYPES[type];
+  let L0=0,a0=0,b0=0,n=0;
+  for (let yy=y-2;yy<=y+2;yy++) for (let xx=x-2;xx<=x+2;xx++){ if (xx<0||yy<0||xx>=W||yy>=H) continue; const i=yy*W+xx; L0+=SL[i]; a0+=SA[i]; b0+=SB[i]; n++; }
+  if (!n) return new Int32Array(0);
+  L0/=n; a0/=n; b0/=n;
+  const R2 = Math.pow(0.12*Math.max(W,H), 2), MAXN = 90000;
+  const seen = new Uint8Array(W*H), q = new Int32Array(MAXN); let qh=0, qt=0;
+  const ok = i => Math.abs(SL[i]-L0)<=t.tolL && Math.hypot(SA[i]-a0, SB[i]-b0)<=t.tolAB;
+  const s = y*W+x; seen[s]=1; if (!ok(s)) return new Int32Array(0); q[qt++]=s;
+  while (qh<qt && qt<MAXN){
+    const i = q[qh++], ix = i%W, iy = (i-ix)/W;
+    const nb = [ix>0?i-1:-1, ix<W-1?i+1:-1, iy>0?i-W:-1, iy<H-1?i+W:-1];
+    for (const j of nb){
+      if (j<0 || seen[j]) continue; seen[j]=1;
+      const jx=j%W, jy=(j-jx)/W; if ((jx-x)*(jx-x)+(jy-y)*(jy-y) > R2) continue;
+      if (ok(j)){ q[qt++]=j; if (qt>=MAXN) break; }
+    }
+  }
+  return q.slice(0, qt);
+}
+function cloudOf(type){
+  const parts = markers.filter(m => m.type===type).map(m => m.idx);
+  let n = 0; for (const p of parts) n += p.length;
+  const out = new Int32Array(n); let o = 0; for (const p of parts){ out.set(p,o); o+=p.length; }
+  return out;
+}
+function subsample(idx, max){
+  if (idx.length <= max) return idx;
+  const out = new Int32Array(max), step = idx.length/max;
+  for (let i=0;i<max;i++) out[i] = idx[Math.floor(i*step)];
+  return out;
+}
+const linAt = i => { const d=srcData.data, p=i*4; return [toLin(d[p]/255), toLin(d[p+1]/255), toLin(d[p+2]/255)]; };
+const pct = (arr, q) => { const s = Float64Array.from(arr).sort(); return s[Math.min(s.length-1, Math.max(0, Math.floor(q*(s.length-1))))]; };
+function zoneStats(list){ // list of {L,C,h}
+  let x=0,y=0,w=0; for (const s of list){ x+=Math.cos(s.h*D2R)*s.C; y+=Math.sin(s.h*D2R)*s.C; w+=s.C; }
+  const h = wrap(Math.atan2(y,x)/D2R);
+  let v=0; for (const s of list){ const d=angDiff(s.h,h); v+=d*d*s.C; }
+  const sd = Math.sqrt(v/Math.max(w,1e-9));
+  const Ls = list.map(s=>s.L), Cs = list.map(s=>s.C);
+  return { h, sd, Lmin:pct(Ls,0.05), Lmax:pct(Ls,0.95), Cmin:pct(Cs,0.05), Cmax:pct(Cs,0.95), Lc:pct(Ls,0.5), Cc:pct(Cs,0.5) };
+}
+
+/* ---------- step 1: normalisation (light by neutrals, skin hue and chroma separately) ---------- */
+function prepNorm(){
+  NM = { W:null, skin:null, nMean:null };
+  if (!srcData) return;
+  const nms = markers.filter(m => m.type==="neutral");
+  if (nms.length){
+    // each neutral marker votes equally, whatever the size of its cloud
+    const m=[0,0,0];
+    for (const mk of nms){
+      const ix = subsample(mk.idx, 6000), s=[0,0,0];
+      for (const i of ix){ const v=linAt(i); s[0]+=v[0]; s[1]+=v[1]; s[2]+=v[2]; }
+      for (let k=0;k<3;k++) m[k] += s[k]/ix.length/nms.length;
+    }
+    NM.nMean = m;
+    if (P.wb>0 && m[1]>0.002) NM.W = wbMatrix(m, P.wb);
+  }
+  const sIdx = subsample(cloudOf("skin"), 3000);
+  if (sIdx.length){
+    const list = [];
+    for (const i of sIdx){ const [L,a,b] = linToOklab(...normLin(linAt(i))); const C=Math.hypot(a,b); if (C>0.008) list.push({L,C,h:wrap(Math.atan2(b,a)/D2R)}); }
+    if (list.length > 10){
+      const z = zoneStats(list);
+      NM.skin = { h:z.h, w:Math.max(4, Math.min(20, 1.5*z.sd+3)), Lmin:z.Lmin, Lmax:z.Lmax, Cmax:z.Cmax, FK:Math.max(20, 1.7*Math.abs(P.skinDh)+1) };
+    }
+  }
+}
+function normLin(v){ return NM && NM.W ? mul(NM.W, v) : v; }
+function skinWeight(L,C,h){
+  const s = NM.skin;
+  return weight(angDiff(h,s.h), s.w, s.FK) * smooth((C-0.008)/0.03) * (1-smooth((C-(s.Cmax+0.02))/0.1))
+       * smooth((L-(s.Lmin-0.12))/0.1) * (1-smooth((L-(s.Lmax+0.04))/0.06));
+}
+function normLch(L,C,h){
+  if (!NM || !NM.skin || (P.skinCf===1 && P.skinDh===0)) return [C,h];
+  const w = skinWeight(L,C,h);
+  return [C*(1+(P.skinCf-1)*w), h+P.skinDh*w];
+}
+function normLab(v){ // linear sRGB in → normalised OkLab out (no harmony)
+  v = normLin(v); const [L,a,b] = linToOklab(v[0],v[1],v[2]); let C=Math.hypot(a,b), h=Math.atan2(b,a)/D2R;
+  const C0 = C;
+  if (C>1e-5){ const n=normLch(L,C,h); C=n[0]; h=n[1]; }
+  return { L, C, C0, h:wrap(h) };
+}
+
+/* ---------- step 2 pins: marker colours the chord should leave in place ---------- */
+function prepPins(){
+  PINS = [];
+  const groups = [];
+  for (const t of PIN_TYPES){
+    if (t==="hold") markers.filter(m => m.type==="hold").forEach(m => groups.push([t, m.idx]));
+    else groups.push([t, cloudOf(t)]);
+  }
+  if (srcData) for (const [t, all] of groups){
+    const idx = subsample(all, 3000); if (!idx.length) continue;
+    // pins live in the space the chord sees: hue after skin correction, chroma before it (keeps the hue map monotonic)
+    const list = []; for (const i of idx){ const z = normLab(linAt(i)); if (z.C0>0.006) list.push({ L:z.L, C:z.C0, h:z.h }); }
+    if (list.length < 10) continue;
+    const z = zoneStats(list);
+    PINS.push({ type:t, h:z.h, w:Math.max(4, Math.min(25, 1.5*z.sd+3)), Lmin:z.Lmin, Lmax:z.Lmax, Cmin:z.Cmin, Cmax:z.Cmax, Lc:z.Lc, Cc:z.Cc });
+  }
+  if (!PINS.some(p => p.type==="skin")) PINS.push({ type:"skin", def:true, h:P.skinH, w:P.skinW, Lc:0.75, Cc:0.07, Cmax:0.16 });
+}
+function pinWin(p,L,C){ // how much this pin applies at this lightness and chroma
+  if (p.def) return smooth((C-0.012)/0.02) * (1-smooth((C-0.15)/0.07)) * smooth((L-0.25)/0.15) * (1-smooth((L-0.95)/0.04));
+  return smooth((C-(p.Cmin-0.03))/0.03) * (1-smooth((C-(p.Cmax+0.02))/0.06))
+       * smooth((L-(p.Lmin-0.1))/0.1) * (1-smooth((L-(p.Lmax+0.05))/0.08));
+}
+/* A pin is a local "return" map applied after the chord: it carries the hue that landed where the pinned colour went
+   back towards the pinned colour. Each return map is monotone (falloff ≥ 1.7 × its pull), and a chain of monotone maps
+   is monotone, so holding colours can never fold or reverse hues. */
+const applyPin = (q, x) => x + q.d*weight(angDiff(x, q.c), q.w, q.F);
+const skinHue = () => { const p = PINS.find(q => q.type==="skin"); return p ? p.h : P.skinH; };
+
+/* ---------- the harmonic transform ---------- */
+let G = null;
+function geometry(){
+  const s = MODE_S[P.mode];
+  const sp = Math.max(P.spread, -0.8*Math.max(s,10));
+  const axis = wrap(P.base+180);
+  const sides = s===0 ? [axis] : [wrap(axis+s+sp), wrap(axis-s-sp)];
+  const rB = P.rotAll, rO = P.rotAll+P.rotOpp;
+  G = { s, sp, axis, sides, rB, rO,
+        FB: Math.max(P.fall, 1.6*Math.abs(rB)+1), FO: Math.max(P.fall, 1.6*Math.abs(rO)+1),
+        FS: Math.max(P.fall, 1.6*Math.abs(sp)+1), inner: Math.max(s,10) };
+}
+function rawShift(L,C,h){
+  let h1 = h;
+  if (G.sp !== 0){
+    const d = angDiff(h, G.axis), ad = Math.abs(d), sg = d<0 ? -1 : 1;
+    let nd = d;
+    if (ad <= G.inner) nd = d*(1+G.sp/G.inner);
+    else if (ad < G.inner+G.FS) nd = d + sg*G.sp*(1-smooth((ad-G.inner)/G.FS));
+    h1 = G.axis + nd;
+  }
+  const wB = weight(angDiff(h1,P.base), P.core, G.FB);
+  let wO = 0; for (const sh of G.sides) wO = Math.max(wO, weight(angDiff(h1,sh), P.core, G.FO));
+  const tot = wB+wO;
+  const h2 = h1 + (tot>0 ? (wB*G.rB + wO*G.rO)/Math.max(1,tot) : 0);
+  return angDiff(h2, h);
+}
+function transformHue(L,C,h){
+  if (C < 1e-6) return h;
+  const delta = rawShift(L,C,h);
+  const wn = wnAt(C);
+  let x = h + delta*wn;
+  if (!P.skinLock) return x;
+  const done = [];
+  for (const p of PINS){
+    const s = P.skinStr*pinWin(p,L,C); if (s <= 0) continue;
+    let c = p.h + rawShift(L,C,p.h)*wn; for (const q of done) c = applyPin(q, c);
+    const d = angDiff(p.h, c)*s; if (Math.abs(d) < 1e-4) continue;
+    const q = { c, d, w:p.w, F:Math.max(22, 1.7*Math.abs(d)+1) };
+    x = applyPin(q, x); done.push(q);
+  }
+  return x;
+}
+const wnAt = C => smooth((C-P.neutral)/(P.neutral+0.012));
+function xf(r,g,b,space){
+  let v = [toLin(r),toLin(g),toLin(b)];
+  if (space==="p3") v = mul(P3toS, v);
+  v = normLin(v);
+  const [L,a,bb] = linToOklab(v[0],v[1],v[2]);
+  let C = Math.hypot(a,bb), h = Math.atan2(bb,a)/D2R;
+  if (C > 1e-5){ const n = normLch(L,C,h); h = transformHue(L,C,n[1]); C = n[0]; }
+  const o = mapToGamut(L,C,h,space);
+  return [toEnc(clamp01(o[0])), toEnc(clamp01(o[1])), toEnc(clamp01(o[2]))];
+}
+function prepAll(){ geometry(); prepNorm(); prepPins(); }
+function buildLUT(N, space){
+  prepAll();
+  const lut = new Float32Array(N*N*N*3); let k = 0; const n1 = N-1;
+  for (let b=0;b<N;b++) for (let g=0;g<N;g++) for (let r=0;r<N;r++){
+    const o = xf(r/n1, g/n1, b/n1, space); lut[k++]=o[0]; lut[k++]=o[1]; lut[k++]=o[2];
+  }
+  return lut;
+}
+function applyLUT(src, dst, lut, N){
+  const s = src, d = dst, n1 = N-1, NN = N*N;
+  const idx = new Int32Array(256), fr = new Float32Array(256);
+  for (let v=0;v<256;v++){ const x=v/255*n1; let i=Math.floor(x); if (i>=n1) i=n1-1; idx[v]=i; fr[v]=x-i; }
+  const oR=3, oG=N*3, oB=NN*3;
+  for (let p=0;p<s.length;p+=4){
+    const r=s[p], g=s[p+1], b=s[p+2];
+    const base=(idx[r]+idx[g]*N+idx[b]*NN)*3, fx=fr[r], fy=fr[g], fz=fr[b];
+    for (let c=0;c<3;c++){
+      const q=base+c;
+      const c000=lut[q], c100=lut[q+oR], c010=lut[q+oG], c110=lut[q+oR+oG];
+      const c001=lut[q+oB], c101=lut[q+oR+oB], c011=lut[q+oG+oB], c111=lut[q+oR+oG+oB];
+      const x00=c000+(c100-c000)*fx, x10=c010+(c110-c010)*fx, x01=c001+(c101-c001)*fx, x11=c011+(c111-c011)*fx;
+      const y0=x00+(x10-x00)*fy, y1=x01+(x11-x01)*fy;
+      d[p+c]=(y0+(y1-y0)*fz)*255;
+    }
+    d[p+3]=s[p+3];
+  }
+}
+
+/* ---------- image ---------- */
+const imgCv = $("img"), imgCtx = imgCv.getContext("2d", { willReadFrequently:true });
+let srcFull = null, srcData = null, outData = null, samples = [];
+const MAX_PREVIEW = 1400;
+function setStatus(t){ $("status").textContent = t; }
+function loadImage(url, label, preset){
+  const im = new Image();
+  im.onload = () => {
+    srcFull = im;
+    const sc = Math.min(1, MAX_PREVIEW/Math.max(im.naturalWidth, im.naturalHeight));
+    imgCv.width = Math.round(im.naturalWidth*sc); imgCv.height = Math.round(im.naturalHeight*sc);
+    imgCtx.drawImage(im, 0, 0, imgCv.width, imgCv.height);
+    zoom = 1; applyZoom(false); box.scrollLeft = box.scrollTop = 0;
+    srcData = imgCtx.getImageData(0,0,imgCv.width,imgCv.height);
+    outData = imgCtx.createImageData(imgCv.width, imgCv.height);
+    prepSource();
+    markers = []; P.skinCf = 1; P.skinDh = 0;
+    if (preset) for (const [type, fx, fy] of preset) addMarker(type, Math.round(fx*imgCv.width), Math.round(fy*imgCv.height), true);
+    rebuildOverlay(); renderChips();
+    makeSamples();
+    srcName = (label||"snimok").replace(/\.[^.]+$/,"").replace(/^Пример:.*/,"portrait");
+    histReset();
+    setStatus(label + " · " + im.naturalWidth + "×" + im.naturalHeight);
+    syncUI(); schedule();
+  };
+  im.onerror = () => setStatus("Этот файл браузер не открыл. Подойдут JPEG, PNG или WebP.");
+  im.src = url;
+}
+function addMarker(type, x, y, quiet){
+  const idx = grow(x, y, type);
+  if (idx.length < 12){ if (!quiet) setStatus("Облако слишком мало: в этой точке нет однородной области. Щёлкните в середину предмета."); return false; }
+  markers.push({ type, x, y, idx });
+  if (!quiet) setStatus(TYPES[type].name[0].toUpperCase()+TYPES[type].name.slice(1)+": облако "+idx.length.toLocaleString("ru-RU")+" пикс.");
+  return true;
+}
+let overlay = null;
+function rebuildOverlay(){
+  if (!srcData) return;
+  const W = imgCv.width, H = imgCv.height;
+  overlay = document.createElement("canvas"); overlay.width = W; overlay.height = H;
+  const ox = overlay.getContext("2d"), id = ox.createImageData(W,H), d = id.data;
+  for (const m of markers){
+    const neutral = m.type==="neutral";
+    for (const i of m.idx){ const p=i*4; if (neutral){ d[p]=0; d[p+1]=0; d[p+2]=0; } else { d[p]=255; d[p+1]=255; d[p+2]=255; } d[p+3]=150; }
+  }
+  ox.putImageData(id,0,0);
+}
+function renderChips(){
+  const box = $("chips"); box.textContent = "";
+  markers.forEach((m, k) => {
+    const c = document.createElement("span"); c.className = "chip";
+    c.textContent = TYPES[m.type].name+" · "+m.idx.length.toLocaleString("ru-RU")+" пикс.";
+    const x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", "Убрать маркер: "+TYPES[m.type].name);
+    x.addEventListener("click", () => { markers.splice(k,1); rebuildOverlay(); renderChips(); commit(); schedule(); });
+    c.appendChild(x); box.appendChild(c);
+  });
+  $("chipsNote").hidden = markers.length>0;
+}
+function drawMarkers(){
+  const k = imgCv.width/900 * Math.min(1, fitDisp()/Math.max(dispNow(), 1e-6));
+  imgCtx.font = "600 "+Math.round(13*k)+"px "+getComputedStyle(document.body).fontFamily;
+  imgCtx.textBaseline = "middle";
+  for (const m of markers){
+    imgCtx.lineWidth = 2.5*k; imgCtx.strokeStyle = "#111"; imgCtx.fillStyle = "#fff";
+    imgCtx.beginPath(); imgCtx.arc(m.x, m.y, 6*k, 0, Math.PI*2); imgCtx.fill(); imgCtx.stroke();
+    const t = TYPES[m.type].name, tx = m.x+10*k, ty = m.y;
+    imgCtx.lineWidth = 3*k; imgCtx.strokeText(t, tx, ty); imgCtx.fillText(t, tx, ty);
+  }
+}
+function makeSamples(){
+  samples = [];
+  const d = srcData.data, n = d.length/4, count = Math.min(4000, n);
+  let seed = 1234567;
+  const rnd = () => (seed = (seed*1103515245+12345) & 0x7fffffff) / 0x7fffffff;
+  for (let i=0;i<count;i++){
+    const p = Math.floor(rnd()*n)*4;
+    const lch = rgbToLch(d[p]/255, d[p+1]/255, d[p+2]/255);
+    samples.push({ p, L:lch.L, C:lch.C, h:lch.h });
+  }
+}
+
+/* ---------- analysis: where is the colour mass opposite the skin ---------- */
+function circMean(list){
+  let x=0,y=0,w=0;
+  for (const s of list){ x+=Math.cos(s.h*D2R)*s.w; y+=Math.sin(s.h*D2R)*s.w; w+=s.w; }
+  return w < 0.4 ? null : wrap(Math.atan2(y,x)/D2R);
+}
+function oppositeMass(){
+  const axis = wrap(skinHue()+180), win = 45, cMin = Math.max(P.neutral*1.5, 0.02);
+  const before = [], after = [];
+  for (const s of samples){
+    const z = normLab(linAt(s.p/4));
+    if (z.C < cMin) continue;
+    if (Math.abs(angDiff(z.h, axis)) > win) continue;
+    before.push({ h:z.h, w:z.C });
+    after.push({ h:wrap(transformHue(z.L, z.C0, z.h)), w:z.C });
+  }
+  return { before: circMean(before), after: circMean(after) };
+}
+
+/* ---------- wheel ---------- */
+const wheel = $("wheel"), wctx = wheel.getContext("2d");
+const CMAX = 0.37;
+let disc = null, wSize = 0, cusp = null;
+const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#888";
+function computeCusp(){
+  cusp = { srgb:new Float32Array(180), p3:new Float32Array(180) };
+  for (const sp of ["srgb","p3"]){
+    for (let i=0;i<180;i++){
+      const h = i*2; let best = 0;
+      for (let L=0.05; L<=0.98; L+=0.03){
+        let lo=0, hi=0.45;
+        for (let k=0;k<12;k++){ const mid=(lo+hi)/2; if (inG(lchLin(L,mid,h,sp))) lo=mid; else hi=mid; }
+        if (lo>best) best=lo;
+      }
+      cusp[sp][i] = best;
+    }
+  }
+}
+function makeDisc(){
+  const dpr = Math.min(2, window.devicePixelRatio||1);
+  const css = wheel.getBoundingClientRect().width || 340;
+  wSize = Math.round(css*dpr);
+  wheel.width = wSize; wheel.height = wSize;
+  const R = wSize*0.44, c = wSize/2;
+  const off = document.createElement("canvas"); off.width = wSize; off.height = wSize;
+  const octx = off.getContext("2d"); const id = octx.createImageData(wSize, wSize); const d = id.data;
+  for (let y=0;y<wSize;y++) for (let x=0;x<wSize;x++){
+    const dx=x-c, dy=c-y, r=Math.hypot(dx,dy); if (r>R) continue;
+    const C = r/R*CMAX, h = Math.atan2(dy,dx)/D2R;
+    const v = lchLin(0.72, C, h, "srgb"); if (!inG(v)) continue;
+    const p = (y*wSize+x)*4;
+    d[p]=toEnc(clamp01(v[0]))*255; d[p+1]=toEnc(clamp01(v[1]))*255; d[p+2]=toEnc(clamp01(v[2]))*255; d[p+3]=110;
+  }
+  octx.putImageData(id,0,0); disc = off;
+}
+function polar(h, C, R, c){ const r = Math.min(C/CMAX,1.04)*R; return [c+Math.cos(h*D2R)*r, c-Math.sin(h*D2R)*r]; }
+function drawWheel(){
+  if (!disc || !cusp) return;
+  const S = wSize, c = S/2, R = S*0.44, k = S/340;
+  const fg = tok("--fg"), muted = tok("--muted"), line = tok("--line");
+  wctx.clearRect(0,0,S,S);
+  wctx.drawImage(disc,0,0);
+  // rings and ticks
+  wctx.strokeStyle = line; wctx.lineWidth = 1*k;
+  for (const cc of [0.1,0.2,0.3]){ wctx.beginPath(); wctx.arc(c,c,cc/CMAX*R,0,Math.PI*2); wctx.stroke(); }
+  wctx.fillStyle = muted; wctx.font = (10*k)+"px "+getComputedStyle(document.body).getPropertyValue("--font-data");
+  wctx.textAlign="center"; wctx.textBaseline="middle";
+  for (let h=0; h<360; h+=30){
+    const [x1,y1]=polar(h,CMAX*1.0,R,c), [x2,y2]=polar(h,CMAX*1.04,R,c);
+    wctx.strokeStyle = muted; wctx.beginPath(); wctx.moveTo(x1,y1); wctx.lineTo(x2,y2); wctx.stroke();
+    if (h%90===0){ const [tx,ty]=polar(h,CMAX*1.12,R,c); wctx.fillText(h+"°",tx,ty); }
+  }
+  // gamut contours
+  for (const sp of ["p3","srgb"]){
+    wctx.beginPath();
+    for (let i=0;i<=180;i++){ const [x,y]=polar(i*2, cusp[sp][i%180], R, c); i?wctx.lineTo(x,y):wctx.moveTo(x,y); }
+    wctx.setLineDash(sp==="p3"?[4*k,4*k]:[]); wctx.strokeStyle = muted; wctx.lineWidth = 1.2*k; wctx.stroke();
+  }
+  wctx.setLineDash([]);
+  // neutral protection
+  wctx.setLineDash([2*k,3*k]); wctx.strokeStyle = fg; wctx.lineWidth = 1*k;
+  wctx.beginPath(); wctx.arc(c,c,Math.max(P.neutral,0.003)/CMAX*R,0,Math.PI*2); wctx.stroke(); wctx.setLineDash([]);
+  // pinned zones (skin, lips, sky, foliage)
+  if (P.skinLock){
+    for (const p of PINS){
+      const rIn = p.def ? 0 : Math.max(0, p.Cmin)/CMAX*R, rOut = Math.min(CMAX, (p.def ? 0.16 : p.Cmax+0.01))/CMAX*R;
+      const a0=-(p.h+p.w)*D2R, a1=-(p.h-p.w)*D2R;
+      wctx.beginPath(); wctx.arc(c,c,rOut,a0,a1); wctx.arc(c,c,rIn,a1,a0,true); wctx.closePath();
+      wctx.globalAlpha=0.16; wctx.fillStyle=fg; wctx.fill(); wctx.globalAlpha=1;
+      wctx.setLineDash(p.def?[3*k,3*k]:[]); wctx.strokeStyle=fg; wctx.lineWidth=1*k; wctx.stroke(); wctx.setLineDash([]);
+      const [tx,ty]=polar(p.h,(p.def?0.16:p.Cmax+0.01)+0.035,R,c); wctx.fillStyle=fg; wctx.fillText(TYPES[p.type].name,tx,ty);
+    }
+  }
+  // sample dots
+  const view = P.view==="after" && outData ? outData.data : srcData ? srcData.data : null;
+  if (view){
+    for (const s of samples){
+      const r=view[s.p]/255, g=view[s.p+1]/255, b=view[s.p+2]/255;
+      const l = rgbToLch(r,g,b); if (l.C < 0.004) continue;
+      const [x,y]=polar(l.h,l.C,R,c);
+      wctx.fillStyle = "rgb("+view[s.p]+","+view[s.p+1]+","+view[s.p+2]+")";
+      wctx.fillRect(x-1.3*k,y-1.3*k,2.6*k,2.6*k);
+    }
+  }
+  // chord: ghost (original) and current
+  const ghostSides = G.s===0 ? [G.axis] : [wrap(G.axis+G.s), wrap(G.axis-G.s)];
+  wctx.strokeStyle = muted; wctx.lineWidth = 1*k; wctx.setLineDash([2*k,3*k]);
+  for (const h of [P.base, ...ghostSides]){ const [x,y]=polar(h,CMAX,R,c); wctx.beginPath(); wctx.moveTo(c,c); wctx.lineTo(x,y); wctx.stroke(); }
+  wctx.setLineDash([]);
+  const baseNow = wrap(P.base+G.rB);
+  const sidesNow = G.sides.map(h => wrap(h+G.rO));
+  wctx.strokeStyle = fg; wctx.lineWidth = 2*k;
+  { const [x,y]=polar(baseNow,CMAX,R,c); wctx.beginPath(); wctx.moveTo(c,c); wctx.lineTo(x,y); wctx.stroke();
+    wctx.beginPath(); wctx.arc(x,y,6*k,0,Math.PI*2); wctx.fillStyle=fg; wctx.fill(); }
+  wctx.setLineDash([6*k,4*k]);
+  for (const h of sidesNow){ const [x,y]=polar(h,CMAX,R,c); wctx.beginPath(); wctx.moveTo(c,c); wctx.lineTo(x,y); wctx.stroke(); }
+  wctx.setLineDash([]);
+  for (const h of sidesNow){ const [x,y]=polar(h,CMAX,R,c); wctx.beginPath(); wctx.arc(x,y,6*k,0,Math.PI*2); wctx.fillStyle=tok("--panel"); wctx.fill(); wctx.lineWidth=2*k; wctx.stroke(); }
+  // opposite-mass marker
+  if (lastMass && lastMass.after!==null){
+    const [x,y]=polar(lastMass.after,CMAX*1.0,R,c), [x2,y2]=polar(lastMass.after,CMAX*0.9,R,c);
+    wctx.strokeStyle=fg; wctx.lineWidth=3*k; wctx.beginPath(); wctx.moveTo(x,y); wctx.lineTo(x2,y2); wctx.stroke();
+  }
+}
+function wheelAngle(e){
+  const r = wheel.getBoundingClientRect();
+  const x = e.clientX - (r.left + r.width/2), y = (r.top + r.height/2) - e.clientY;
+  return Math.round(wrap(Math.atan2(y,x)/D2R));
+}
+let dragging = false;
+wheel.addEventListener("pointerdown", e => { dragging = true; wheel.setPointerCapture(e.pointerId); P.base = wheelAngle(e); syncUI(); schedule(); });
+wheel.addEventListener("pointermove", e => { if (!dragging) return; P.base = wheelAngle(e); syncUI(); schedule(); });
+const endDrag = () => { if (dragging) commit(); dragging = false; };
+wheel.addEventListener("pointerup", endDrag); wheel.addEventListener("pointercancel", endDrag);
+
+/* ---------- render loop ---------- */
+let pending = false, lastMass = null;
+function schedule(){ if (pending) return; pending = true; requestAnimationFrame(render); }
+function render(){
+  pending = false;
+  if (!srcData) return;
+  const lut = buildLUT(33, "srgb");
+  applyLUT(srcData.data, outData.data, lut, 33);
+  imgCtx.putImageData(P.view==="after" ? outData : srcData, 0, 0);
+  if (P.clouds && overlay) imgCtx.drawImage(overlay, 0, 0);
+  drawMarkers();
+  lastMass = oppositeMass();
+  updateReadout();
+  updateNormReadout();
+  updateMeasure();
+  drawWheel();
+}
+/* ---------- normalisation readouts (Lab D50, as in Photoshop) ---------- */
+const f1 = v => (v<0?"−":"")+Math.abs(v).toFixed(1);
+const fab = (a,b) => "a "+f1(a)+"  b "+f1(b);
+function finalLin(v){ // normalised linear sRGB (no harmony), gamut-clipped like the output
+  v = normLin(v); const [L,a,b] = linToOklab(v[0],v[1],v[2]); let C=Math.hypot(a,b), h=Math.atan2(b,a)/D2R;
+  if (C>1e-5){ const n=normLch(L,C,h); C=n[0]; h=n[1]; }
+  return mapToGamut(L,C,h,"srgb").map(clamp01);
+}
+function brightSkin(useSkinAdj){
+  const idx = subsample(cloudOf("skin"), 2500); if (idx.length<10) return null;
+  const save = [P.skinCf, P.skinDh]; if (!useSkinAdj){ P.skinCf=1; P.skinDh=0; }
+  const labs = []; for (const i of idx) labs.push(labD50(finalLin(linAt(i))));
+  P.skinCf = save[0]; P.skinDh = save[1];
+  const cut = pct(labs.map(x=>x[0]), 0.75);
+  const top = labs.filter(x => x[0]>=cut);
+  const med = k => pct(top.map(x=>x[k]), 0.5);
+  const L=med(0), a=med(1), b=med(2);
+  return { L, a, b, C:Math.hypot(a,b), h:wrap(Math.atan2(b,a)/D2R) };
+}
+function updateNormReadout(){
+  // light
+  const nm = markers.filter(m => m.type==="neutral");
+  if (!nm.length){ $("wbInfo").innerHTML = "<span>Нет маркеров нейтрали — свет не меняется.</span>"; }
+  else {
+    const rows = nm.map((m,k) => {
+      const ix = subsample(m.idx, 3000); let s=[0,0,0], o=[0,0,0];
+      for (const i of ix){ const v=linAt(i), f=finalLin(v); for (let c=0;c<3;c++){ s[c]+=v[c]; o[c]+=f[c]; } }
+      s = s.map(x=>x/ix.length); o = o.map(x=>x/ix.length);
+      const A = labD50(s), B = labD50(o);
+      return { A, B };
+    });
+    let html = rows.map((r,k) => "Нейтраль "+(k+1)+": "+fab(r.A[1],r.A[2])+" → "+fab(r.B[1],r.B[2])).join("<br>");
+    if (rows.length>1){
+      let sp=0; for (let i=0;i<rows.length;i++) for (let j=i+1;j<rows.length;j++) sp=Math.max(sp, Math.hypot(rows[i].B[1]-rows[j].B[1], rows[i].B[2]-rows[j].B[2]));
+      html += "<br><span>Расхождение между нейтралями после баланса: "+sp.toFixed(1)+(sp>3 ? " — похоже на разные световые зоны" : "")+"</span>";
+    }
+    $("wbInfo").innerHTML = html;
+  }
+  // skin
+  const tC = Math.hypot(P.tA,P.tB), tH = wrap(Math.atan2(P.tB,P.tA)/D2R);
+  $("oTarget").textContent = "C "+tC.toFixed(1)+" · тон "+tH.toFixed(0)+"°";
+  const sk = brightSkin(true), sk0 = brightSkin(false);
+  $("skinToTarget").disabled = !sk;
+  if (!sk){ $("skinInfo").innerHTML = "<span>Нет маркера кожи. Поставьте его на светлую сторону лица; второй — на тень, облака сложатся.</span>"; $("wbOnly").textContent = "—"; }
+  else {
+    $("skinInfo").innerHTML = "Светлая часть кожи: L "+sk.L.toFixed(0)+" · "+fab(sk.a,sk.b)+"<br>C "+sk.C.toFixed(1)+" · тон "+sk.h.toFixed(0)+"°"
+      +"<br><span>До цели: тон "+(angDiff(tH,sk.h)>=0?"+":"−")+Math.abs(angDiff(tH,sk.h)).toFixed(1)+"°, насыщенность "+(tC-sk.C>=0?"+":"−")+Math.abs(tC-sk.C).toFixed(1)+"</span>";
+    const da = P.tA-sk0.a, db = P.tB-sk0.b;
+    $("wbOnly").textContent = "Если добирать кожу до цели одним балансом белого, нейтрали сдвинулись бы примерно на a "+f1(da)+", b "+f1(db)+" (на "+Math.hypot(da,db).toFixed(1)+"). Оценка: вблизи нейтральной оси сдвиг почти одинаков для кожи и серого.";
+  }
+  // neutral levels in the final image
+  if (outData && samples.length){
+    const d = outData.data, bands = { black:[], grey:[], white:[] }; let n=0;
+    for (const s of samples){
+      const lab = labD50([toLin(d[s.p]/255), toLin(d[s.p+1]/255), toLin(d[s.p+2]/255)]); n++;
+      if (Math.hypot(lab[1],lab[2]) >= 8) continue;
+      (lab[0]<20 ? bands.black : lab[0]>75 ? bands.white : bands.grey).push(lab);
+    }
+    for (const [key,id,dot] of [["black","lBlack","dBlack"],["grey","lGrey","dGrey"],["white","lWhite","dWhite"]]){
+      const arr = bands[key], share = arr.length/n*100;
+      if (arr.length < 8){ $(id).textContent = "нет"; $(dot).className = "dot"; continue; }
+      const a = pct(arr.map(x=>x[1]),0.5), b = pct(arr.map(x=>x[2]),0.5), dev = Math.hypot(a,b);
+      $(id).innerHTML = share.toFixed(0)+"%<br>"+fab(a,b);
+      $(dot).className = "dot" + (dev<2.5 && share>=1 ? " ok" : dev<5 ? " near" : "");
+    }
+  }
+}
+function fmtDeg(v){ return v===null ? "—" : Math.round(v)+"°"; }
+function updateReadout(){
+  const SH = skinHue();
+  $("rSkin").textContent = Math.round(SH)+"°";
+  $("rAxis").textContent = Math.round(wrap(SH+180))+"°";
+  // pins: how far the chord pulls each marker colour and how much of it is held
+  if (!P.skinLock) $("pinInfo").innerHTML = "<span>Закрепления выключены.</span>";
+  else $("pinInfo").innerHTML = PINS.map(p => {
+    const pull = rawShift(p.Lc, p.Cc, p.h)*wnAt(p.Cc), moved = angDiff(transformHue(p.Lc, p.Cc, p.h), p.h), hold = Math.abs(pull)>1e-3 ? 1-moved/pull : 0;
+    const sg = v => (v>=0?"+":"−")+Math.abs(v).toFixed(1)+"°";
+    return TYPES[p.type].name+(p.def?" (по таблице)":"")+" "+Math.round(p.h)+"°: аккорд тянет "+sg(pull)+", сдвиг "+sg(moved)+(Math.abs(pull)>=0.5 ? " · держит "+Math.round(hold*100)+"%" : "");
+  }).join("<br>");
+  const m = lastMass;
+  if (!m || m.after===null){
+    $("rMass").textContent = "нет массы";
+    $("rInt").textContent = "—";
+    $("vDot").className = "dot"; $("vText").textContent = "Напротив кожи нет заметных насыщенных цветов";
+    $("align").disabled = true; return;
+  }
+  $("align").disabled = false;
+  $("rMass").textContent = fmtDeg(m.before)+" → "+fmtDeg(m.after);
+  const dev = angDiff(m.after, SH+180);
+  const interval = Math.abs(angDiff(m.after, SH));
+  $("rInt").textContent = Math.round(interval)+"° ("+(dev>=0?"+":"−")+Math.abs(Math.round(dev))+"°)";
+  const a = Math.abs(dev);
+  $("vDot").className = "dot" + (a<=5 ? " ok" : a<=12 ? " near" : "");
+  $("vText").textContent = a<=5 ? "Масса стоит на оси напротив кожи" : a<=12 ? "Масса рядом с осью" : "Масса ушла с оси напротив кожи на " + Math.round(a) + "°";
+}
+
+/* ---------- history: every finished change is a step; Назад/Вперёд walk it ---------- */
+const HIST_SKIP = new Set(["view","pick","clouds","space","size"]);
+let hist = [], histPos = -1, srcName = "snimok";
+function snap(){ const o = {}; for (const k in P) if (!HIST_SKIP.has(k)) o[k] = P[k]; return { p:o, m:markers.slice() }; }
+function same(a,b){ if (a.m.length!==b.m.length || a.m.some((x,i)=>x!==b.m[i])) return false; for (const k in a.p) if (a.p[k]!==b.p[k]) return false; return true; }
+function histReset(){ hist = [snap()]; histPos = 0; }
+function commit(){
+  if (histPos<0) return histReset();
+  const s = snap(); if (same(s, hist[histPos])) return;
+  hist = hist.slice(0, histPos+1); hist.push(s); if (hist.length>200) hist.shift(); histPos = hist.length-1;
+  $("undo").disabled = false; $("redo").disabled = true;
+}
+function histGo(d){
+  const n = histPos+d; if (n<0 || n>=hist.length) return;
+  histPos = n; const s = hist[n]; Object.assign(P, s.p); markers = s.m.slice();
+  rebuildOverlay(); renderChips();
+}
+
+/* ---------- measurements table: source → normalised → final ---------- */
+function encToLin(r,g,b){ return [toLin(r),toLin(g),toLin(b)]; }
+function cloudReadings(idx, brightOnly){
+  let ix = subsample(idx, 1500);
+  const d = srcData.data, rows = [];
+  for (const i of ix){
+    const p=i*4, r=d[p]/255, g=d[p+1]/255, b=d[p+2]/255, v=encToLin(r,g,b);
+    const o = xf(r,g,b,"srgb");
+    rows.push([labD50(v), labD50(finalLin(v)), labD50(encToLin(o[0],o[1],o[2]))]);
+  }
+  let use = rows;
+  if (brightOnly && rows.length>8){ const cut = pct(rows.map(x=>x[0][0]),0.75); use = rows.filter(x=>x[0][0]>=cut); }
+  return [0,1,2].map(k => { const L=pct(use.map(x=>x[k][0]),0.5), a=pct(use.map(x=>x[k][1]),0.5), b=pct(use.map(x=>x[k][2]),0.5); return [L,a,b]; });
+}
+const cellLab = ([L,a,b]) => "L "+L.toFixed(0)+" · "+fab(a,b)+"<br><span class='dim'>C "+Math.hypot(a,b).toFixed(1)+" · "+wrap(Math.atan2(b,a)/D2R).toFixed(0)+"°</span>";
+function updateMeasure(){
+  const body = $("mBody");
+  if (!markers.length || !srcData){ body.innerHTML = "<tr><td colspan='4' class='dim'>Нет маркеров.</td></tr>"; return; }
+  const rows = [];
+  let nN=0, nH=0;
+  for (const m of markers) if (m.type==="neutral") rows.push(["нейтраль "+(++nN), m.idx, false]);
+  for (const t of ["skin","lips","sky","foliage"]){ const c = cloudOf(t); if (c.length) rows.push([t==="skin" ? "кожа, светлая часть" : TYPES[t].name, c, t==="skin"]); }
+  for (const m of markers) if (m.type==="hold") rows.push(["цвет "+(++nH), m.idx, false]);
+  body.innerHTML = rows.map(([name, idx, br]) => { const r = cloudReadings(idx, br); return "<tr><td>"+name+"</td><td>"+cellLab(r[0])+"</td><td>"+cellLab(r[1])+"</td><td>"+cellLab(r[2])+"</td></tr>"; }).join("");
+}
+
+/* ---------- controls ---------- */
+const sliders = [
+  ["sBase","oBase","base", v=>v+"°"], ["sRotAll","oRotAll","rotAll", v=>(v>0?"+":"")+v+"°"],
+  ["sRotOpp","oRotOpp","rotOpp", v=>(v>0?"+":"")+v+"°"], ["sSpread","oSpread","spread", v=>(v>0?"+":"")+v+"°"],
+  ["sCore","oCore","core", v=>"±"+v+"°"], ["sFall","oFall","fall", v=>v+"°"],
+  ["sNeutral","oNeutral","neutral", v=>"C "+Number(v).toFixed(3)], ["sSkinStr","oSkinStr","skinStr", v=>Math.round(v*100)+"%"],
+  ["sWb","oWb","wb", v=>Math.round(v*100)+"%"], ["sSkinCf","oSkinCf","skinCf", v=>Math.round(v*100)+"%"],
+  ["sSkinDh","oSkinDh","skinDh", v=>(v>0?"+":v<0?"−":"")+Math.abs(v)+"°"]
+];
+function syncUI(){
+  for (const [sid,oid,key,f] of sliders){ $(sid).value = P[key]; $(oid).textContent = f(Number(P[key])); }
+  $("cSkin").checked = P.skinLock;
+  $("tA").value = P.tA; $("tB").value = P.tB;
+  const press = (id, on) => $(id).setAttribute("aria-pressed", on ? "true" : "false");
+  press("mPair",P.mode==="pair"); press("mSplit",P.mode==="split"); press("mTriad",P.mode==="triad");
+  press("vBefore",P.view==="before"); press("vAfter",P.view==="after");
+  for (const [id,t] of [["pBase","base"],["pNeutral","neutral"],["pSkin","skin"],["pLips","lips"],["pSky","sky"],["pFoliage","foliage"],["pHold","hold"]]) press(id, P.pick===t);
+  $("undo").disabled = histPos<=0; $("redo").disabled = histPos>=hist.length-1;
+  press("tClouds", P.clouds);
+  press("spS",P.space==="srgb"); press("spP",P.space==="p3");
+  press("n33",P.size===33); press("n65",P.size===65);
+  geometry();
+}
+for (const [sid,,key] of sliders){
+  $(sid).addEventListener("input", e => { P[key] = Number(e.target.value); syncUI(); schedule(); });
+  $(sid).addEventListener("change", () => commit());
+}
+$("cSkin").addEventListener("change", e => { P.skinLock = e.target.checked; schedule(); });
+const on = (id, fn) => $(id).addEventListener("click", () => { fn(); syncUI(); commit(); schedule(); });
+on("mPair", () => P.mode="pair"); on("mSplit", () => P.mode="split"); on("mTriad", () => P.mode="triad");
+on("vBefore", () => P.view="before"); on("vAfter", () => P.view="after");
+on("pBase", () => P.pick="base"); on("pNeutral", () => P.pick="neutral"); on("pSkin", () => P.pick="skin");
+on("pLips", () => P.pick="lips"); on("pSky", () => P.pick="sky"); on("pFoliage", () => P.pick="foliage"); on("pHold", () => P.pick="hold");
+on("undo", () => histGo(-1)); on("redo", () => histGo(1));
+on("resetAll", () => {
+  for (const k in DEFAULTS) if (!HIST_SKIP.has(k)) P[k] = DEFAULTS[k];
+  markers = []; rebuildOverlay(); renderChips();
+  setStatus("Всё сброшено: регуляторы в исходном положении, маркеров нет. Вернуть — «← Назад».");
+});
+document.addEventListener("keydown", e => {
+  if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase()!=="z") return;
+  if (e.target && /input|textarea/i.test(e.target.tagName) && e.target.type!=="range") return;
+  e.preventDefault(); histGo(e.shiftKey ? 1 : -1); syncUI(); schedule();
+});
+on("tClouds", () => P.clouds = !P.clouds);
+on("skinReset", () => { P.skinCf = 1; P.skinDh = 0; });
+on("skinToTarget", () => {
+  const tC = Math.hypot(P.tA,P.tB), tH = wrap(Math.atan2(P.tB,P.tA)/D2R);
+  for (let i=0;i<6;i++){
+    prepAll();
+    const s = brightSkin(true); if (!s) break;
+    const dh = angDiff(tH, s.h), cf = tC/Math.max(s.C, 0.5);
+    if (Math.abs(dh)<0.2 && Math.abs(cf-1)<0.005) break;
+    P.skinDh = Math.max(-15, Math.min(15, Math.round((P.skinDh+dh)*2)/2));
+    P.skinCf = Math.max(0.5, Math.min(1.5, Math.round(P.skinCf*cf*100)/100));
+  }
+});
+for (const id of ["tA","tB"]) $(id).addEventListener("change", e => {
+  const v = Number(e.target.value); if (!isFinite(v)) return;
+  P[id] = Math.max(0, Math.min(40, v)); syncUI(); commit(); schedule();
+});
+on("spS", () => P.space="srgb"); on("spP", () => P.space="p3");
+on("n33", () => P.size=33); on("n65", () => P.size=65);
+on("reset", () => { P.rotAll=0; P.rotOpp=0; P.spread=0; });
+on("align", () => {
+  prepAll();
+  P.base = Math.round(skinHue());
+  for (let i=0;i<5;i++){
+    prepAll();
+    const m = oppositeMass(); if (!m || m.after===null) break;
+    const dev = angDiff(skinHue()+180, m.after);
+    if (Math.abs(dev) < 0.5) break;
+    P.rotOpp = Math.max(-60, Math.min(60, Math.round(P.rotOpp + dev)));
+  }
+});
+
+imgCv.addEventListener("click", e => {
+  if (!srcData) return;
+  if (dragMoved){ dragMoved = false; return; }
+  const r = imgCv.getBoundingClientRect();
+  const x = Math.floor((e.clientX-r.left)/r.width*imgCv.width), y = Math.floor((e.clientY-r.top)/r.height*imgCv.height);
+  if (P.pick!=="base"){
+    if (addMarker(P.pick, x, y, false)){ rebuildOverlay(); renderChips(); commit(); schedule(); }
+    return;
+  }
+  const d = srcData.data; let R=0,Gc=0,B=0,n=0;
+  for (let yy=y-2; yy<=y+2; yy++) for (let xx=x-2; xx<=x+2; xx++){
+    if (xx<0||yy<0||xx>=imgCv.width||yy>=imgCv.height) continue;
+    const p=(yy*imgCv.width+xx)*4; R+=d[p]; Gc+=d[p+1]; B+=d[p+2]; n++;
+  }
+  if (!n) return;
+  const l = rgbToLch(R/n/255, Gc/n/255, B/n/255);
+  if (l.C < 0.012){ setStatus("Цвет почти серый: оттенок не определён. Возьмите более насыщенную точку."); return; }
+  P.base = Math.round(l.h); setStatus("Основная нота: "+Math.round(l.h)+"°, C "+l.C.toFixed(3));
+  syncUI(); schedule();
+});
+$("fileIn").addEventListener("change", e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  const url = URL.createObjectURL(f); loadImage(url, f.name);
+});
+const stage = document.querySelector(".stage");
+stage.addEventListener("dragover", e => { e.preventDefault(); });
+stage.addEventListener("drop", e => { e.preventDefault(); const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) loadImage(URL.createObjectURL(f), f.name); });
+
+/* ---------- export ---------- */
+let downloads = null;
+(async () => {
+  try { downloads = (window.claude && window.claude.use) ? await window.claude.use("downloads") : null; } catch(e){ downloads = null; }
+  const ok = !!downloads;
+  $("saveLut").hidden = !ok; $("savePng").hidden = !ok; $("saveJpg").hidden = !ok; $("copyLut").hidden = ok;
+  if (!ok) $("exportNote").textContent = "Сохранение файлов в этом окне недоступно. LUT 33 можно скопировать как текст и сохранить в файл с расширением .cube.";
+})();
+function cubeText(N, space){
+  const lut = buildLUT(N, space);
+  const head = ["TITLE \"Complement "+space+"\"",
+    "# Комплементарный круг: mode="+P.mode+" base="+P.base+" rotAll="+P.rotAll+" rotOpp="+P.rotOpp+" spread="+P.spread+" core="+P.core+" fall="+P.fall,
+    "# neutral="+P.neutral+" pins="+(P.skinLock?PINS.map(p=>p.type+"@"+Math.round(p.h)).join(","):"off")+" pinStr="+P.skinStr+" input="+(space==="p3"?"Display P3":"sRGB"),
+    "# normalisation: neutralMarkers="+markers.filter(m=>m.type==="neutral").length+" wb="+P.wb+" skinChroma="+P.skinCf+" skinHue="+P.skinDh+" (LUT includes normalisation for this frame)",
+    "LUT_3D_SIZE "+N, "DOMAIN_MIN 0 0 0", "DOMAIN_MAX 1 1 1"];
+  const lines = new Array(N*N*N);
+  for (let i=0,k=0;i<lines.length;i++,k+=3) lines[i] = lut[k].toFixed(6)+" "+lut[k+1].toFixed(6)+" "+lut[k+2].toFixed(6);
+  return head.join("\n")+"\n"+lines.join("\n")+"\n";
+}
+const CRC_T = (() => { const t=new Uint32Array(256); for (let n=0;n<256;n++){ let c=n; for (let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(u){ let c=0xFFFFFFFF; for (let i=0;i<u.length;i++) c = CRC_T[(c^u[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function zipOne(name, data){
+  const nm = new TextEncoder().encode(name), crc = crc32(data), n = data.length;
+  const lh = new DataView(new ArrayBuffer(30));
+  lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(12,0x21,true);
+  lh.setUint32(14,crc,true); lh.setUint32(18,n,true); lh.setUint32(22,n,true); lh.setUint16(26,nm.length,true);
+  const cd = new DataView(new ArrayBuffer(46));
+  cd.setUint32(0,0x02014b50,true); cd.setUint16(4,20,true); cd.setUint16(6,20,true); cd.setUint16(14,0x21,true);
+  cd.setUint32(16,crc,true); cd.setUint32(20,n,true); cd.setUint32(24,n,true); cd.setUint16(28,nm.length,true);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true); end.setUint16(8,1,true); end.setUint16(10,1,true);
+  end.setUint32(12,46+nm.length,true); end.setUint32(16,30+nm.length+n,true);
+  return new Blob([lh, nm, data, cd, nm, end], { type:"application/zip" });
+}
+const busy = (on) => { for (const id of ["saveLut","savePng","copyLut","saveJpg"]) $(id).disabled = on; };
+$("saveJpg").addEventListener("click", async () => {
+  if (!downloads || !srcFull) return; busy(true); setStatus("Обрабатываю снимок в полном размере…");
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    const cv = document.createElement("canvas"); cv.width = srcFull.naturalWidth; cv.height = srcFull.naturalHeight;
+    const cx = cv.getContext("2d", { willReadFrequently:true }); cx.drawImage(srcFull,0,0);
+    const id = cx.getImageData(0,0,cv.width,cv.height);
+    const lut = buildLUT(65, "srgb"); applyLUT(id.data, id.data, lut, 65); cx.putImageData(id,0,0);
+    const blob = await new Promise(r => cv.toBlob(r, "image/jpeg", 0.95));
+    await downloads.save({ filename: srcName+"_harmony.jpg", data: blob });
+    setStatus("Снимок сохранён: "+srcName+"_harmony.jpg, "+cv.width+"×"+cv.height+".");
+  } catch(e){ setStatus(explain(e)); }
+  busy(false);
+});
+function explain(err){
+  const c = err && err.code;
+  if (c==="declined") return "Сохранение отменено.";
+  if (c==="rate_limited") return "Окно сохранения уже открыто. Завершите его и попробуйте снова.";
+  return "Не удалось сохранить файл здесь ("+(c||"ошибка")+").";
+}
+$("saveLut").addEventListener("click", async () => {
+  if (!downloads) return; busy(true); setStatus("Считаю LUT "+P.size+"³…");
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    const name = "complement_"+P.space+"_"+P.size;
+    const data = new TextEncoder().encode(cubeText(P.size, P.space));
+    await downloads.save({ filename: name+".zip", data: zipOne(name+".cube", data) });
+    setStatus("LUT сохранён: "+name+".cube внутри архива.");
+  } catch(e){ setStatus(explain(e)); }
+  busy(false);
+});
+$("savePng").addEventListener("click", async () => {
+  if (!downloads || !srcFull) return; busy(true); setStatus("Обрабатываю снимок в полном размере…");
+  await new Promise(r => setTimeout(r, 30));
+  try {
+    const cv = document.createElement("canvas"); cv.width = srcFull.naturalWidth; cv.height = srcFull.naturalHeight;
+    const cx = cv.getContext("2d", { willReadFrequently:true }); cx.drawImage(srcFull,0,0);
+    const id = cx.getImageData(0,0,cv.width,cv.height);
+    const lut = buildLUT(65, "srgb"); applyLUT(id.data, id.data, lut, 65); cx.putImageData(id,0,0);
+    const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+    await downloads.save({ filename:"complement.png", data: blob });
+    setStatus("Снимок сохранён.");
+  } catch(e){ setStatus(explain(e)); }
+  busy(false);
+});
+$("copyLut").addEventListener("click", async () => {
+  busy(true);
+  try { await navigator.clipboard.writeText(cubeText(33, P.space)); setStatus("LUT 33 скопирован. Сохраните текст в файл .cube."); }
+  catch(e){ setStatus("Буфер обмена недоступен в этом окне."); }
+  busy(false);
+});
+
+/* ---------- zoom / pan ---------- */
+const box = document.querySelector(".canvas-box");
+let zoom = 1, dragMoved = false;
+function boxInner(){ const cs = getComputedStyle(box); return { w: box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), h: Math.min(0.74*window.innerHeight, 900) }; }
+function fitDisp(){ if (!imgCv.width) return 1; const b = boxInner(); return Math.min(1, b.w/imgCv.width, b.h/imgCv.height) || 1; }
+function dispNow(){ const w = imgCv.getBoundingClientRect().width; return imgCv.width ? w/imgCv.width : 1; }
+let zTimer = 0;
+function applyZoom(redraw){
+  if (!imgCv.width) return;
+  if (zoom <= 1.0001){ zoom = 1; imgCv.classList.remove("zoomed","px"); imgCv.style.width = imgCv.style.height = ""; }
+  else {
+    const d = fitDisp()*zoom;
+    imgCv.classList.add("zoomed"); imgCv.classList.toggle("px", d > 2);
+    imgCv.style.width = Math.round(imgCv.width*d)+"px"; imgCv.style.height = Math.round(imgCv.height*d)+"px";
+  }
+  $("zVal").textContent = Math.round(dispNow()*100)+"%";
+  if (redraw){ clearTimeout(zTimer); zTimer = setTimeout(() => schedule(), 120); }
+}
+function setZoom(z, cx, cy){
+  const r0 = imgCv.getBoundingClientRect();
+  if (cx == null){ const b = box.getBoundingClientRect(); cx = b.left+b.width/2; cy = b.top+b.height/2; }
+  const fx = (cx-r0.left)/r0.width, fy = (cy-r0.top)/r0.height;
+  zoom = Math.max(1, Math.min(z, 12));
+  applyZoom(true);
+  const r1 = imgCv.getBoundingClientRect();
+  box.scrollLeft += (r1.left + fx*r1.width) - cx;
+  box.scrollTop  += (r1.top  + fy*r1.height) - cy;
+}
+box.addEventListener("wheel", e => {
+  if (!srcData) return;
+  e.preventDefault();
+  const dy = e.deltaMode === 1 ? e.deltaY*30 : e.deltaY;
+  setZoom(zoom*Math.exp(-dy*(e.ctrlKey ? 0.01 : 0.0015)), e.clientX, e.clientY);
+}, { passive:false });
+$("zIn").addEventListener("click", () => setZoom(zoom*1.4));
+$("zOut").addEventListener("click", () => setZoom(zoom/1.4));
+$("zFit").addEventListener("click", () => { zoom = 1; applyZoom(true); box.scrollLeft = box.scrollTop = 0; });
+$("zOne").addEventListener("click", () => setZoom(1/fitDisp()));
+let drag = null;
+imgCv.addEventListener("pointerdown", e => {
+  if (e.pointerType === "touch" || e.button !== 0 || zoom <= 1) return;
+  drag = { x:e.clientX, y:e.clientY, sl:box.scrollLeft, st:box.scrollTop, moved:false };
+  imgCv.setPointerCapture(e.pointerId);
+});
+imgCv.addEventListener("pointermove", e => {
+  if (!drag) return;
+  const dx = e.clientX-drag.x, dy = e.clientY-drag.y;
+  if (!drag.moved && Math.hypot(dx,dy) < 5) return;
+  drag.moved = true; imgCv.classList.add("panning");
+  box.scrollLeft = drag.sl-dx; box.scrollTop = drag.st-dy;
+});
+function endPan(){ if (drag && drag.moved){ dragMoved = true; setTimeout(() => { dragMoved = false; }, 0); } drag = null; imgCv.classList.remove("panning"); }
+imgCv.addEventListener("pointerup", endPan);
+imgCv.addEventListener("pointercancel", endPan);
+new ResizeObserver(() => applyZoom(false)).observe(box);
+
+/* ---------- foldable panels ---------- */
+const FOLD_KEY = "harmony.folds";
+let folds = {};
+try { folds = JSON.parse(localStorage.getItem(FOLD_KEY) || "{}") || {}; } catch(e){ folds = {}; }
+const panels = [...document.querySelectorAll(".panel")].filter(p => p.firstElementChild && p.firstElementChild.tagName === "H2");
+function setFold(p, collapsed){
+  p.classList.toggle("collapsed", collapsed);
+  p.firstElementChild.setAttribute("aria-expanded", String(!collapsed));
+}
+function saveFolds(){ try { localStorage.setItem(FOLD_KEY, JSON.stringify(folds)); } catch(e){} }
+panels.forEach((p, i) => {
+  const h = p.firstElementChild; h.classList.add("fold"); h.setAttribute("role","button"); h.tabIndex = 0;
+  const key = h.textContent.trim().slice(0, 24);
+  setFold(p, !!folds[key]);
+  const toggle = () => { const c = !p.classList.contains("collapsed"); setFold(p, c); folds[key] = c; saveFolds(); };
+  h.addEventListener("click", toggle);
+  h.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); toggle(); } });
+  p._key = key;
+});
+function foldAll(c){ panels.forEach(p => { setFold(p, c); folds[p._key] = c; }); saveFolds(); }
+$("foldAll").addEventListener("click", () => foldAll(true));
+$("unfoldAll").addEventListener("click", () => foldAll(false));
+
+/* ---------- boot ---------- */
+function relayout(){ makeDisc(); drawWheel(); }
+new ResizeObserver(() => relayout()).observe(wheel);
+const mq = window.matchMedia("(prefers-color-scheme: dark)");
+if (mq.addEventListener) mq.addEventListener("change", drawWheel);
+new MutationObserver(drawWheel).observe(document.documentElement, { attributes:true, attributeFilter:["data-theme"] });
+syncUI();
+computeCusp();
+relayout();
+// demo markers, as fractions of the frame: grey patch of the chart, lit cheek, shadow cheek, lips
+const DEMO_MARKERS = [["neutral",1105/1717,1632/2576],["skin",840/1717,820/2576],["skin",1085/1717,830/2576],["lips",970/1717,918/2576]];
+loadImage(DEMO_SRC, "Пример: тестовый портрет, нормализованный по коже", DEMO_MARKERS);
+})();
+</script>

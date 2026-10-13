@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+__pycache__/
+*.log
+prototype/build/
+data/raw/
+data/demo/
+data/work/
+*.npy
+ov_*.png
+SESSIONS_CHAT.md

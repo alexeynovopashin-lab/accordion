@@ -1,0 +1,24 @@
+const { chromium } = require('playwright');
+(async () => {
+  const b = await chromium.launch({ ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) });
+  const p = await b.newPage({ viewport:{ width:1440, height:1400 } });
+  const errs=[]; p.on('pageerror', e=>errs.push(e.message));
+  await p.goto('file://'+process.cwd()+'/complement_built.html'); await p.waitForTimeout(2500);
+  const v = async () => [await p.$eval('#sRotAll', e=>e.value), await p.$eval('#oSkinCf', e=>e.textContent), await p.$eval('#chips', e=>e.children.length), await p.$eval('#undo', e=>e.disabled), await p.$eval('#redo', e=>e.disabled)];
+  console.log('start', await v());
+  await p.$eval('#sRotAll', e=>{ e.value=25; e.dispatchEvent(new Event('input')); e.dispatchEvent(new Event('change')); });
+  await p.click('#skinToTarget');
+  await p.click('#pHold');
+  const box = await p.$eval('#img', e => { const r=e.getBoundingClientRect(); return {x:r.left,y:r.top,w:r.width,h:r.height}; });
+  await p.mouse.click(box.x+box.w*(330/1717), box.y+box.h*(1470/2576)); await p.waitForTimeout(800);
+  console.log('after 3 edits', await v());
+  await p.click('#undo'); await p.waitForTimeout(300); console.log('undo1', await v());
+  await p.click('#undo'); await p.waitForTimeout(300); console.log('undo2', await v());
+  await p.click('#undo'); await p.waitForTimeout(300); console.log('undo3', await v());
+  await p.click('#redo'); await p.waitForTimeout(300); console.log('redo', await v());
+  await p.keyboard.press('Control+Shift+Z'); await p.waitForTimeout(300); console.log('redo key', await v());
+  await p.waitForTimeout(800);
+  console.log((await p.$eval('#mBody', e=>e.innerText)).replace(/\t/g,' ‖ '));
+  await p.screenshot({ path:'shot4.png', fullPage:true });
+  console.log('ERR', errs); await b.close();
+})();
