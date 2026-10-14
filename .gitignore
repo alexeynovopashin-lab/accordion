@@ -9,3 +9,6 @@ data/work/
 *.npy
 ov_*.png
 SESSIONS_CHAT.md
+
+# third-party books and papers: copyrighted, kept locally only
+docs/*.pdf
