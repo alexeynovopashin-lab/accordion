@@ -1,0 +1,9 @@
+question,patch_set,with_lightness,n,median_dE00,p90_dE00
+b_scanner_vs_scanner,neu,True,116,2.88,5.13
+b_scanner_vs_scanner,neu,False,116,2.36,4.86
+b_scanner_vs_scanner,chrom,True,296,5.64,10.35
+b_scanner_vs_scanner,chrom,False,296,4.05,8.04
+c_film_vs_film_same_scanner,neu,True,348,2.05,4.35
+c_film_vs_film_same_scanner,neu,False,348,1.34,3.49
+c_film_vs_film_same_scanner,chrom,True,888,5.32,12.47
+c_film_vs_film_same_scanner,chrom,False,888,4.23,10.34
