@@ -38,7 +38,7 @@ Next: a transferable colour «recipe» (a film/scanner "school" as hue-dependent
   `undo_and_table.js`, `curves.js` (curve tool; `OLD=<old complement_built.html>` for the byte check, `BREAK=1` must fail), `hsl.js` (plate «Цвета»: skin/neutral cores, samples, .cube vs render, UI, lips measurement; `BREAK=1` must fail). Needs `npm i playwright` (+ a browser; set `CHROMIUM=<path>` to use an installed one). On the author's machine (2026-10-14): `npm i playwright` in a scratch dir + `NODE_PATH=<dir>/node_modules`, `CHROMIUM=~/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`; last run 2026-10-14, 0 folds.
 - Published artifact: https://claude.ai/artifact/AQtb8gA5SjqhnVht8qwod5 (v5, 2026-10-13). Publish `prototype/build/complement_built.html`
   to the same URL with capabilities `{"downloads":{}}`. Source stays here (ws rule 24).
-- бета: https://claude.ai/artifact/MHjfLcC7MEtQHCujKBV7q8 («Accordion beta», 2026-10-14, v3: desktop shell — fixed photo, scrolling tool column; same build, publish to this URL for beta work, capabilities `{"downloads":{}}`).
+- бета: https://claude.ai/artifact/MHjfLcC7MEtQHCujKBV7q8 («Accordion beta», 2026-10-14, v4: plate «Цвета» (HSL by 8 sectors with samples) on the v3 desktop shell; same build, publish to this URL for beta work, capabilities `{"downloads":{}}`).
 - Measurements: `tools/film_measure/README.md`.
 
 ## Rules specific to this project
