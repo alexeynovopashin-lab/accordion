@@ -45,6 +45,7 @@ Next: a transferable colour «recipe» (a film/scanner "school" as hue-dependent
 - **Numbers before conclusions.** A colour claim needs a measurement and its caveat. Colour numbers: Lab D50, CIEDE2000.
 - **Data stays out of git**: scans are third-party (rights unknown), the demo photo shows a person. Only measured tables go in
   `data/derived/`. The repo may become public (ws rule 28) — assume it is.
+- **Work in small tasks, compress between them.** One step = one task (≈ ≤10 tool calls or one long run). After a long run, write the result into `docs/NEXT_SESSION.md`, commit, and tell Alexey to start a fresh session (or `/compact`) before the next step. Don't chain several long runs in one session (limits).
 - **Pins never fold hues** (`prototype/tests/fold.js` is the guard). Don't touch the hue-map maths without running it.
 - Gamut mapping, LUT export (.cube in a stored ZIP — the `downloads` capability allows only zip), history/undo: don't rewrite unasked.
 - Remote: https://github.com/alexeynovopashin-lab/accordion (public). Push/publish only after Alexey says so (record it in `INDEX.md`).
