@@ -1,0 +1,193 @@
+film,scanner,patch,L_in,a_in,b_in,L_out,a_out,b_out,dE00
+Portra 400,Frontier,dark skin,37.986,13.555,14.059,39.39,9.34,9.36,4.16
+Portra 400,Frontier,light skin,65.711,18.13,17.81,62.73,11.34,10.19,6.17
+Portra 400,Frontier,blue sky,49.927,-4.88,-21.925,52.06,-8.47,-16.96,4.74
+Portra 400,Frontier,foliage,43.139,-13.095,21.905,42.75,-9.38,12.00,5.67
+Portra 400,Frontier,blue flower,55.112,8.844,-25.399,54.93,0.87,-20.10,5.91
+Portra 400,Frontier,bluish green,70.719,-33.397,-0.199,69.17,-14.42,-4.70,10.76
+Portra 400,Frontier,orange,62.661,36.067,57.096,58.37,22.99,42.95,6.96
+Portra 400,Frontier,purplish blue,40.02,10.41,-45.964,42.49,-5.40,-30.43,7.16
+Portra 400,Frontier,moderate red,51.124,48.239,16.248,49.81,28.85,13.48,7.39
+Portra 400,Frontier,purple,30.325,22.976,-21.587,33.88,13.46,-15.96,6.22
+Portra 400,Frontier,yellow green,72.532,-23.709,57.255,64.80,-15.74,34.95,9.51
+Portra 400,Frontier,orange yellow,71.941,19.363,67.857,64.99,13.02,47.43,7.98
+Portra 400,Frontier,blue,28.778,14.179,-50.297,33.54,-4.24,-32.35,8.15
+Portra 400,Frontier,green,55.261,-38.342,31.37,53.64,-23.49,12.57,9.44
+Portra 400,Frontier,red,42.101,53.378,28.19,40.83,35.75,24.75,6.42
+Portra 400,Frontier,yellow,81.733,4.039,79.819,72.01,2.99,53.83,9.51
+Portra 400,Frontier,magenta,51.935,49.986,-14.574,49.62,37.26,-10.23,5.00
+Portra 400,Frontier,cyan,51.038,-28.631,-28.638,54.37,-24.77,-22.62,4.27
+Portra 400,Frontier,white 9.5,96.539,-0.425,1.186,93.39,0.73,-2.79,4.56
+Portra 400,Frontier,neutral 8,81.257,-0.638,-0.335,76.22,0.10,-4.39,5.20
+Portra 400,Frontier,neutral 6.5,66.766,-0.734,-0.504,64.65,-0.11,-3.73,3.54
+Portra 400,Frontier,neutral 5,50.867,-0.153,-0.27,51.69,0.15,-2.88,2.61
+Portra 400,Frontier,neutral 3.5,35.656,-0.421,-1.231,38.30,-0.33,-3.11,2.82
+Portra 400,Frontier,black 2,20.461,-0.079,-0.973,25.17,0.30,-2.11,3.57
+Portra 400,Noritsu,dark skin,37.986,13.555,14.059,39.70,9.00,9.70,4.34
+Portra 400,Noritsu,light skin,65.711,18.13,17.81,63.04,10.83,11.02,6.04
+Portra 400,Noritsu,blue sky,49.927,-4.88,-21.925,50.14,-9.58,-10.33,8.48
+Portra 400,Noritsu,foliage,43.139,-13.095,21.905,42.84,-11.48,13.91,4.39
+Portra 400,Noritsu,blue flower,55.112,8.844,-25.399,53.16,-0.16,-12.97,8.70
+Portra 400,Noritsu,bluish green,70.719,-33.397,-0.199,68.53,-15.74,-2.80,9.43
+Portra 400,Noritsu,orange,62.661,36.067,57.096,59.63,22.38,37.72,7.31
+Portra 400,Noritsu,purplish blue,40.02,10.41,-45.964,38.91,-6.30,-19.73,7.75
+Portra 400,Noritsu,moderate red,51.124,48.239,16.248,50.34,29.27,14.71,7.34
+Portra 400,Noritsu,purple,30.325,22.976,-21.587,33.05,13.49,-11.58,7.11
+Portra 400,Noritsu,yellow green,72.532,-23.709,57.255,65.25,-19.44,33.90,9.70
+Portra 400,Noritsu,orange yellow,71.941,19.363,67.857,66.54,10.75,40.60,9.15
+Portra 400,Noritsu,blue,28.778,14.179,-50.297,29.95,-4.78,-21.95,6.91
+Portra 400,Noritsu,green,55.261,-38.342,31.37,53.75,-24.59,18.67,6.85
+Portra 400,Noritsu,red,42.101,53.378,28.19,41.67,36.93,24.65,5.78
+Portra 400,Noritsu,yellow,81.733,4.039,79.819,73.66,0.38,45.45,10.80
+Portra 400,Noritsu,magenta,51.935,49.986,-14.574,49.57,36.44,-6.68,5.99
+Portra 400,Noritsu,cyan,51.038,-28.631,-28.638,51.41,-24.77,-15.29,6.39
+Portra 400,Noritsu,white 9.5,96.539,-0.425,1.186,93.04,-0.94,0.31,2.38
+Portra 400,Noritsu,neutral 8,81.257,-0.638,-0.335,75.87,-1.21,-1.12,3.94
+Portra 400,Noritsu,neutral 6.5,66.766,-0.734,-0.504,64.33,-1.04,-1.13,2.12
+Portra 400,Noritsu,neutral 5,50.867,-0.153,-0.27,51.41,-0.76,-0.70,1.11
+Portra 400,Noritsu,neutral 3.5,35.656,-0.421,-1.231,38.03,-1.12,-1.05,2.25
+Portra 400,Noritsu,black 2,20.461,-0.079,-0.973,24.97,-0.29,-0.67,3.24
+Pro 400H,Frontier,dark skin,37.986,13.555,14.059,40.35,15.81,20.29,4.17
+Pro 400H,Frontier,light skin,65.711,18.13,17.81,66.99,18.15,16.70,1.27
+Pro 400H,Frontier,blue sky,49.927,-4.88,-21.925,52.26,-6.57,-18.81,3.19
+Pro 400H,Frontier,foliage,43.139,-13.095,21.905,43.81,-19.86,12.52,7.96
+Pro 400H,Frontier,blue flower,55.112,8.844,-25.399,57.47,6.52,-18.27,4.36
+Pro 400H,Frontier,bluish green,70.719,-33.397,-0.199,69.40,-29.58,-7.76,5.67
+Pro 400H,Frontier,orange,62.661,36.067,57.096,66.03,29.57,50.72,3.88
+Pro 400H,Frontier,purplish blue,40.02,10.41,-45.964,43.15,12.19,-38.44,5.68
+Pro 400H,Frontier,moderate red,51.124,48.239,16.248,53.67,47.22,26.37,6.27
+Pro 400H,Frontier,purple,30.325,22.976,-21.587,31.16,26.04,-17.90,3.28
+Pro 400H,Frontier,yellow green,72.532,-23.709,57.255,69.83,-21.99,23.58,13.14
+Pro 400H,Frontier,orange yellow,71.941,19.363,67.857,72.62,16.29,54.62,3.58
+Pro 400H,Frontier,blue,28.778,14.179,-50.297,30.90,12.51,-45.08,2.27
+Pro 400H,Frontier,green,55.261,-38.342,31.37,59.08,-35.68,7.82,12.03
+Pro 400H,Frontier,red,42.101,53.378,28.19,45.31,52.26,38.68,6.33
+Pro 400H,Frontier,yellow,81.733,4.039,79.819,78.25,3.40,49.37,8.18
+Pro 400H,Frontier,magenta,51.935,49.986,-14.574,53.49,45.58,-3.86,5.34
+Pro 400H,Frontier,cyan,51.038,-28.631,-28.638,55.38,-26.42,-25.21,4.49
+Pro 400H,Frontier,white 9.5,96.539,-0.425,1.186,93.58,0.18,1.47,2.00
+Pro 400H,Frontier,neutral 8,81.257,-0.638,-0.335,78.85,2.04,-0.23,4.23
+Pro 400H,Frontier,neutral 6.5,66.766,-0.734,-0.504,66.72,0.16,-3.82,3.29
+Pro 400H,Frontier,neutral 5,50.867,-0.153,-0.27,52.99,-2.12,-3.73,4.57
+Pro 400H,Frontier,neutral 3.5,35.656,-0.421,-1.231,36.24,-3.30,-4.04,4.43
+Pro 400H,Frontier,black 2,20.461,-0.079,-0.973,18.72,-1.81,-2.07,2.85
+Pro 400H,Noritsu,dark skin,37.986,13.555,14.059,40.99,18.39,19.47,4.53
+Pro 400H,Noritsu,light skin,65.711,18.13,17.81,67.37,18.36,17.26,1.41
+Pro 400H,Noritsu,blue sky,49.927,-4.88,-21.925,52.50,-4.06,-14.35,4.77
+Pro 400H,Noritsu,foliage,43.139,-13.095,21.905,45.36,-13.57,16.70,3.70
+Pro 400H,Noritsu,blue flower,55.112,8.844,-25.399,57.24,8.92,-15.20,7.12
+Pro 400H,Noritsu,bluish green,70.719,-33.397,-0.199,69.70,-38.14,-2.37,2.41
+Pro 400H,Noritsu,orange,62.661,36.067,57.096,66.47,37.87,48.05,5.46
+Pro 400H,Noritsu,purplish blue,40.02,10.41,-45.964,42.28,8.79,-27.62,9.05
+Pro 400H,Noritsu,moderate red,51.124,48.239,16.248,55.37,52.16,24.44,5.75
+Pro 400H,Noritsu,purple,30.325,22.976,-21.587,30.29,25.59,-16.10,3.99
+Pro 400H,Noritsu,yellow green,72.532,-23.709,57.255,71.13,-22.00,35.31,7.75
+Pro 400H,Noritsu,orange yellow,71.941,19.363,67.857,72.61,19.35,46.44,7.11
+Pro 400H,Noritsu,blue,28.778,14.179,-50.297,29.23,11.88,-33.44,7.48
+Pro 400H,Noritsu,green,55.261,-38.342,31.37,55.82,-36.45,23.72,3.27
+Pro 400H,Noritsu,red,42.101,53.378,28.19,46.12,64.50,40.47,6.06
+Pro 400H,Noritsu,yellow,81.733,4.039,79.819,79.40,2.48,49.65,7.88
+Pro 400H,Noritsu,magenta,51.935,49.986,-14.574,55.12,54.61,-0.40,7.57
+Pro 400H,Noritsu,cyan,51.038,-28.631,-28.638,52.40,-31.00,-19.56,5.12
+Pro 400H,Noritsu,white 9.5,96.539,-0.425,1.186,95.07,-0.32,1.45,0.92
+Pro 400H,Noritsu,neutral 8,81.257,-0.638,-0.335,79.03,1.00,0.40,2.97
+Pro 400H,Noritsu,neutral 6.5,66.766,-0.734,-0.504,67.40,1.42,0.56,3.40
+Pro 400H,Noritsu,neutral 5,50.867,-0.153,-0.27,53.41,0.85,1.26,3.26
+Pro 400H,Noritsu,neutral 3.5,35.656,-0.421,-1.231,37.35,0.53,0.40,2.56
+Pro 400H,Noritsu,black 2,20.461,-0.079,-0.973,19.83,1.19,2.18,3.54
+Velvia 50,Frontier,dark skin,37.986,13.555,14.059,37.34,17.58,13.31,3.36
+Velvia 50,Frontier,light skin,65.711,18.13,17.81,71.34,14.91,14.09,5.10
+Velvia 50,Frontier,blue sky,49.927,-4.88,-21.925,52.80,-3.63,-26.14,3.40
+Velvia 50,Frontier,foliage,43.139,-13.095,21.905,43.54,-19.45,14.69,6.69
+Velvia 50,Frontier,blue flower,55.112,8.844,-25.399,59.76,12.61,-24.80,5.34
+Velvia 50,Frontier,bluish green,70.719,-33.397,-0.199,75.02,-30.82,-6.91,5.77
+Velvia 50,Frontier,orange,62.661,36.067,57.096,66.10,31.88,50.84,3.46
+Velvia 50,Frontier,purplish blue,40.02,10.41,-45.964,39.61,18.99,-49.72,4.38
+Velvia 50,Frontier,moderate red,51.124,48.239,16.248,52.47,60.89,24.73,4.71
+Velvia 50,Frontier,purple,30.325,22.976,-21.587,28.19,29.42,-22.74,3.49
+Velvia 50,Frontier,yellow green,72.532,-23.709,57.255,76.16,-25.64,33.35,9.74
+Velvia 50,Frontier,orange yellow,71.941,19.363,67.857,75.57,11.91,48.09,6.43
+Velvia 50,Frontier,blue,28.778,14.179,-50.297,23.96,25.28,-56.14,6.20
+Velvia 50,Frontier,green,55.261,-38.342,31.37,58.23,-52.27,16.72,9.96
+Velvia 50,Frontier,red,42.101,53.378,28.19,42.21,58.34,40.96,5.40
+Velvia 50,Frontier,yellow,81.733,4.039,79.819,83.71,-1.74,45.89,9.59
+Velvia 50,Frontier,magenta,51.935,49.986,-14.574,55.61,55.05,-7.41,5.24
+Velvia 50,Frontier,cyan,51.038,-28.631,-28.638,52.79,-31.84,-33.64,2.68
+Velvia 50,Frontier,white 9.5,96.539,-0.425,1.186,97.01,-0.53,0.31,0.91
+Velvia 50,Frontier,neutral 8,81.257,-0.638,-0.335,84.22,-1.37,-2.06,2.75
+Velvia 50,Frontier,neutral 6.5,66.766,-0.734,-0.504,72.56,-1.33,-3.47,5.30
+Velvia 50,Frontier,neutral 5,50.867,-0.153,-0.27,53.87,0.00,-4.81,5.04
+Velvia 50,Frontier,neutral 3.5,35.656,-0.421,-1.231,34.34,0.31,-6.08,4.43
+Velvia 50,Frontier,black 2,20.461,-0.079,-0.973,14.44,-0.01,-3.74,4.77
+Velvia 50,Noritsu,dark skin,37.986,13.555,14.059,36.31,19.12,19.94,4.33
+Velvia 50,Noritsu,light skin,65.711,18.13,17.81,67.56,19.45,16.07,2.31
+Velvia 50,Noritsu,blue sky,49.927,-4.88,-21.925,53.11,-1.42,-25.41,4.33
+Velvia 50,Noritsu,foliage,43.139,-13.095,21.905,44.92,-15.18,21.65,2.22
+Velvia 50,Noritsu,blue flower,55.112,8.844,-25.399,58.74,16.26,-25.39,6.50
+Velvia 50,Noritsu,bluish green,70.719,-33.397,-0.199,75.19,-39.38,-8.90,6.71
+Velvia 50,Noritsu,orange,62.661,36.067,57.096,60.41,38.21,60.56,2.17
+Velvia 50,Noritsu,purplish blue,40.02,10.41,-45.964,40.63,18.61,-43.39,6.84
+Velvia 50,Noritsu,moderate red,51.124,48.239,16.248,48.81,49.87,30.68,7.87
+Velvia 50,Noritsu,purple,30.325,22.976,-21.587,24.68,34.86,-18.58,7.80
+Velvia 50,Noritsu,yellow green,72.532,-23.709,57.255,73.72,-22.97,35.01,8.06
+Velvia 50,Noritsu,orange yellow,71.941,19.363,67.857,71.98,22.00,52.52,5.97
+Velvia 50,Noritsu,blue,28.778,14.179,-50.297,24.92,21.87,-51.63,5.41
+Velvia 50,Noritsu,green,55.261,-38.342,31.37,60.56,-49.50,21.42,8.52
+Velvia 50,Noritsu,red,42.101,53.378,28.19,38.98,60.61,43.89,6.94
+Velvia 50,Noritsu,yellow,81.733,4.039,79.819,83.15,2.85,45.77,8.96
+Velvia 50,Noritsu,magenta,51.935,49.986,-14.574,55.06,53.79,-1.79,6.92
+Velvia 50,Noritsu,cyan,51.038,-28.631,-28.638,51.77,-34.07,-33.45,2.55
+Velvia 50,Noritsu,white 9.5,96.539,-0.425,1.186,96.96,0.22,0.42,1.23
+Velvia 50,Noritsu,neutral 8,81.257,-0.638,-0.335,83.36,0.30,-2.67,2.95
+Velvia 50,Noritsu,neutral 6.5,66.766,-0.734,-0.504,69.66,-0.02,-4.54,4.42
+Velvia 50,Noritsu,neutral 5,50.867,-0.153,-0.27,53.62,-0.88,-4.72,4.92
+Velvia 50,Noritsu,neutral 3.5,35.656,-0.421,-1.231,35.10,-1.74,-4.54,3.38
+Velvia 50,Noritsu,black 2,20.461,-0.079,-0.973,16.46,-1.37,-1.87,3.38
+Gold pushed,Frontier,dark skin,37.986,13.555,14.059,37.12,22.35,25.10,6.61
+Gold pushed,Frontier,light skin,65.711,18.13,17.81,68.70,17.61,23.29,4.34
+Gold pushed,Frontier,blue sky,49.927,-4.88,-21.925,52.73,-2.55,-22.55,3.48
+Gold pushed,Frontier,foliage,43.139,-13.095,21.905,40.47,-17.66,25.29,3.70
+Gold pushed,Frontier,blue flower,55.112,8.844,-25.399,59.64,11.04,-18.64,7.10
+Gold pushed,Frontier,bluish green,70.719,-33.397,-0.199,68.21,-23.28,0.73,5.04
+Gold pushed,Frontier,orange,62.661,36.067,57.096,65.43,23.35,64.37,9.35
+Gold pushed,Frontier,purplish blue,40.02,10.41,-45.964,42.53,12.61,-38.83,5.49
+Gold pushed,Frontier,moderate red,51.124,48.239,16.248,54.16,41.73,26.87,8.08
+Gold pushed,Frontier,purple,30.325,22.976,-21.587,33.65,26.22,-19.91,3.52
+Gold pushed,Frontier,yellow green,72.532,-23.709,57.255,71.23,-17.75,50.21,3.12
+Gold pushed,Frontier,orange yellow,71.941,19.363,67.857,72.54,13.34,69.87,3.95
+Gold pushed,Frontier,blue,28.778,14.179,-50.297,26.51,11.62,-48.56,2.04
+Gold pushed,Frontier,green,55.261,-38.342,31.37,49.76,-45.62,23.05,7.62
+Gold pushed,Frontier,red,42.101,53.378,28.19,43.20,51.59,39.15,6.09
+Gold pushed,Frontier,yellow,81.733,4.039,79.819,80.74,1.36,69.22,2.89
+Gold pushed,Frontier,magenta,51.935,49.986,-14.574,56.13,41.51,-6.60,5.92
+Gold pushed,Frontier,cyan,51.038,-28.631,-28.638,50.21,-36.85,-33.97,3.42
+Gold pushed,Frontier,white 9.5,96.539,-0.425,1.186,95.86,-0.11,1.48,0.67
+Gold pushed,Frontier,neutral 8,81.257,-0.638,-0.335,81.49,1.66,0.81,3.55
+Gold pushed,Frontier,neutral 6.5,66.766,-0.734,-0.504,69.38,2.68,1.45,5.64
+Gold pushed,Frontier,neutral 5,50.867,-0.153,-0.27,54.26,4.24,2.32,7.07
+Gold pushed,Frontier,neutral 3.5,35.656,-0.421,-1.231,33.05,0.36,-0.75,2.46
+Gold pushed,Frontier,black 2,20.461,-0.079,-0.973,13.75,-4.35,-1.67,7.18
+Gold pushed,Noritsu,dark skin,37.986,13.555,14.059,38.97,25.72,25.52,7.63
+Gold pushed,Noritsu,light skin,65.711,18.13,17.81,67.16,21.47,21.22,2.46
+Gold pushed,Noritsu,blue sky,49.927,-4.88,-21.925,53.15,-2.49,-15.56,5.19
+Gold pushed,Noritsu,foliage,43.139,-13.095,21.905,43.73,-12.10,26.27,2.64
+Gold pushed,Noritsu,blue flower,55.112,8.844,-25.399,58.31,10.65,-12.13,10.13
+Gold pushed,Noritsu,bluish green,70.719,-33.397,-0.199,69.31,-31.13,-0.57,1.46
+Gold pushed,Noritsu,orange,62.661,36.067,57.096,64.81,31.02,63.27,4.94
+Gold pushed,Noritsu,purplish blue,40.02,10.41,-45.964,46.74,10.01,-26.17,12.32
+Gold pushed,Noritsu,moderate red,51.124,48.239,16.248,54.53,48.08,29.01,7.75
+Gold pushed,Noritsu,purple,30.325,22.976,-21.587,30.81,38.14,-15.65,8.69
+Gold pushed,Noritsu,yellow green,72.532,-23.709,57.255,69.74,-21.41,42.34,5.23
+Gold pushed,Noritsu,orange yellow,71.941,19.363,67.857,72.62,17.20,61.49,1.76
+Gold pushed,Noritsu,blue,28.778,14.179,-50.297,30.57,12.70,-33.36,8.16
+Gold pushed,Noritsu,green,55.261,-38.342,31.37,52.59,-26.12,29.03,5.61
+Gold pushed,Noritsu,red,42.101,53.378,28.19,43.08,59.12,47.60,8.25
+Gold pushed,Noritsu,yellow,81.733,4.039,79.819,81.43,1.89,62.91,4.13
+Gold pushed,Noritsu,magenta,51.935,49.986,-14.574,57.13,50.34,-0.54,8.31
+Gold pushed,Noritsu,cyan,51.038,-28.631,-28.638,51.25,-36.31,-28.42,3.34
+Gold pushed,Noritsu,white 9.5,96.539,-0.425,1.186,96.05,0.13,1.60,0.96
+Gold pushed,Noritsu,neutral 8,81.257,-0.638,-0.335,79.80,0.63,1.22,2.60
+Gold pushed,Noritsu,neutral 6.5,66.766,-0.734,-0.504,66.49,1.31,2.50,4.09
+Gold pushed,Noritsu,neutral 5,50.867,-0.153,-0.27,52.72,2.71,4.70,6.12
+Gold pushed,Noritsu,neutral 3.5,35.656,-0.421,-1.231,34.19,3.49,2.77,6.62
+Gold pushed,Noritsu,black 2,20.461,-0.079,-0.973,14.84,1.02,1.88,4.94

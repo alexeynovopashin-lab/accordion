@@ -29,6 +29,11 @@ https://vision.middlebury.edu/color/data/ — ColorChecker и ColorChecker SG, 3
 - **Известно:** RAW — не откалиброванный цвет (нет цветовой матрицы), JPG — sRGB. **Неизвестно:** авторы и лицензия (страница не
   говорит), возраст камер.
 
+## Color Precision — демо-профили Lightroom/ACR
+Получены от Алексея 14.10.2026 (`~/Downloads/CP Demo - Lightroom/`), те же авторы, что PDF-сканы атласа. 4 плёнки (Portra 400, Pro 400H, Velvia 50, Gold pushed)
+× Frontier/Noritsu × 12 вариантов камер + nonRAW, XMP-профили с RGB-таблицей 32³; Emulation Guide.pdf. Копия `Profiles/` и PDF — `data/raw/cp_demo/` (вне git).
+Установщики (.app/.exe) не запускались. **Права неизвестны** (коммерческий продукт, демо). В git только наши числа: `data/derived/cp_demo_*.csv`.
+
 ## Книги
 - Павел Косенко, «Живая цифра» (Тримедиа Контент, 2013, ISBN 978-5-903788-22-4). Автор раздаёт PDF и ePub бесплатно:
   https://pavelkosenko.photographer.ru/lifilike?lang=rus; у Алексея есть и бумажная. На машине: `docs/pavel_kosenko_zhivaya_tsyfra_2013.pdf`

@@ -1,0 +1,64 @@
+film,scanner,anchor,patch,L,a,b,C,h_deg,b_minus_a,dL,dC,dh_deg,dE00
+reference,,skin_dark,dark skin,38.0,13.6,14.1,19.5,46.0,0.5,0.0,0.0,0.0,0.00
+reference,,skin_light,light skin,65.7,18.1,17.8,25.4,44.5,-0.3,0.0,0.0,0.0,0.00
+reference,,sky,blue sky,49.9,-4.9,-21.9,22.5,257.5,-17.0,0.0,0.0,0.0,0.00
+reference,,foliage,foliage,43.1,-13.1,21.9,25.5,120.9,35.0,0.0,0.0,0.0,0.00
+reference,,neutral_8,neutral 8,81.3,-0.6,-0.3,0.7,207.7,0.3,0.0,0.0,0.0,0.00
+reference,,neutral_5,neutral 5,50.9,-0.2,-0.3,0.3,240.5,-0.1,0.0,0.0,0.0,0.00
+reference,,neutral_3.5,neutral 3.5,35.7,-0.4,-1.2,1.3,251.1,-0.8,0.0,0.0,0.0,0.00
+Portra 400,Frontier,skin_dark,dark skin,39.4,9.3,9.4,13.2,45.0,0.0,1.4,-6.3,-1.0,4.16
+Portra 400,Frontier,skin_light,light skin,62.7,11.3,10.2,15.2,42.0,-1.1,-3.0,-10.2,-2.5,6.17
+Portra 400,Frontier,sky,blue sky,52.1,-8.5,-17.0,19.0,243.5,-8.5,2.1,-3.5,-14.0,4.74
+Portra 400,Frontier,foliage,foliage,42.7,-9.4,12.0,15.2,128.0,21.4,-0.4,-10.3,7.1,5.67
+Portra 400,Frontier,neutral_8,neutral 8,76.2,0.1,-4.4,4.4,271.3,-4.5,-5.0,3.7,63.6,5.20
+Portra 400,Frontier,neutral_5,neutral 5,51.7,0.1,-2.9,2.9,272.9,-3.0,0.8,2.6,32.5,2.61
+Portra 400,Frontier,neutral_3.5,neutral 3.5,38.3,-0.3,-3.1,3.1,264.0,-2.8,2.6,1.8,12.9,2.82
+Portra 400,Noritsu,skin_dark,dark skin,39.7,9.0,9.7,13.2,47.1,0.7,1.7,-6.3,1.1,4.34
+Portra 400,Noritsu,skin_light,light skin,63.0,10.8,11.0,15.5,45.5,0.2,-2.7,-10.0,1.0,6.04
+Portra 400,Noritsu,sky,blue sky,50.1,-9.6,-10.3,14.1,227.1,-0.7,0.2,-8.4,-30.3,8.48
+Portra 400,Noritsu,foliage,foliage,42.8,-11.5,13.9,18.0,129.5,25.4,-0.3,-7.5,8.6,4.39
+Portra 400,Noritsu,neutral_8,neutral 8,75.9,-1.2,-1.1,1.6,222.7,0.1,-5.4,0.9,15.0,3.94
+Portra 400,Noritsu,neutral_5,neutral 5,51.4,-0.8,-0.7,1.0,222.5,0.1,0.5,0.7,-18.0,1.11
+Portra 400,Noritsu,neutral_3.5,neutral 3.5,38.0,-1.1,-1.0,1.5,222.9,0.1,2.4,0.2,-28.2,2.25
+Pro 400H,Frontier,skin_dark,dark skin,40.4,15.8,20.3,25.7,52.1,4.5,2.4,6.2,6.0,4.17
+Pro 400H,Frontier,skin_light,light skin,67.0,18.2,16.7,24.7,42.6,-1.5,1.3,-0.7,-1.9,1.27
+Pro 400H,Frontier,sky,blue sky,52.3,-6.6,-18.8,19.9,250.7,-12.2,2.3,-2.5,-6.7,3.19
+Pro 400H,Frontier,foliage,foliage,43.8,-19.9,12.5,23.5,147.8,32.4,0.7,-2.0,26.9,7.96
+Pro 400H,Frontier,neutral_8,neutral 8,78.9,2.0,-0.2,2.1,353.5,-2.3,-2.4,1.3,145.8,4.23
+Pro 400H,Frontier,neutral_5,neutral 5,53.0,-2.1,-3.7,4.3,240.4,-1.6,2.1,4.0,-0.1,4.57
+Pro 400H,Frontier,neutral_3.5,neutral 3.5,36.2,-3.3,-4.0,5.2,230.8,-0.7,0.6,3.9,-20.3,4.43
+Pro 400H,Noritsu,skin_dark,dark skin,41.0,18.4,19.5,26.8,46.6,1.1,3.0,7.2,0.6,4.53
+Pro 400H,Noritsu,skin_light,light skin,67.4,18.4,17.3,25.2,43.2,-1.1,1.7,-0.2,-1.3,1.41
+Pro 400H,Noritsu,sky,blue sky,52.5,-4.1,-14.3,14.9,254.2,-10.3,2.6,-7.5,-3.3,4.77
+Pro 400H,Noritsu,foliage,foliage,45.4,-13.6,16.7,21.5,129.1,30.3,2.2,-4.0,8.2,3.70
+Pro 400H,Noritsu,neutral_8,neutral 8,79.0,1.0,0.4,1.1,22.0,-0.6,-2.2,0.4,174.3,2.97
+Pro 400H,Noritsu,neutral_5,neutral 5,53.4,0.8,1.3,1.5,56.0,0.4,2.5,1.2,175.6,3.26
+Pro 400H,Noritsu,neutral_3.5,neutral 3.5,37.3,0.5,0.4,0.7,37.3,-0.1,1.7,-0.6,146.2,2.56
+Velvia 50,Frontier,skin_dark,dark skin,37.3,17.6,13.3,22.0,37.1,-4.3,-0.6,2.5,-8.9,3.36
+Velvia 50,Frontier,skin_light,light skin,71.3,14.9,14.1,20.5,43.4,-0.8,5.6,-4.9,-1.1,5.10
+Velvia 50,Frontier,sky,blue sky,52.8,-3.6,-26.1,26.4,262.1,-22.5,2.9,3.9,4.6,3.40
+Velvia 50,Frontier,foliage,foliage,43.5,-19.4,14.7,24.4,142.9,34.1,0.4,-1.1,22.1,6.69
+Velvia 50,Frontier,neutral_8,neutral 8,84.2,-1.4,-2.1,2.5,236.4,-0.7,3.0,1.8,28.7,2.75
+Velvia 50,Frontier,neutral_5,neutral 5,53.9,0.0,-4.8,4.8,270.1,-4.8,3.0,4.5,29.6,5.04
+Velvia 50,Frontier,neutral_3.5,neutral 3.5,34.3,0.3,-6.1,6.1,272.9,-6.4,-1.3,4.8,21.8,4.43
+Velvia 50,Noritsu,skin_dark,dark skin,36.3,19.1,19.9,27.6,46.2,0.8,-1.7,8.1,0.2,4.33
+Velvia 50,Noritsu,skin_light,light skin,67.6,19.5,16.1,25.2,39.6,-3.4,1.8,-0.2,-4.9,2.31
+Velvia 50,Noritsu,sky,blue sky,53.1,-1.4,-25.4,25.4,266.8,-24.0,3.2,3.0,9.3,4.33
+Velvia 50,Noritsu,foliage,foliage,44.9,-15.2,21.7,26.4,125.0,36.8,1.8,0.9,4.2,2.22
+Velvia 50,Noritsu,neutral_8,neutral 8,83.4,0.3,-2.7,2.7,276.5,-3.0,2.1,2.0,68.8,2.95
+Velvia 50,Noritsu,neutral_5,neutral 5,53.6,-0.9,-4.7,4.8,259.4,-3.8,2.8,4.5,18.9,4.92
+Velvia 50,Noritsu,neutral_3.5,neutral 3.5,35.1,-1.7,-4.5,4.9,249.0,-2.8,-0.6,3.6,-2.1,3.38
+Gold pushed,Frontier,skin_dark,dark skin,37.1,22.4,25.1,33.6,48.3,2.7,-0.9,14.1,2.3,6.61
+Gold pushed,Frontier,skin_light,light skin,68.7,17.6,23.3,29.2,52.9,5.7,3.0,3.8,8.4,4.34
+Gold pushed,Frontier,sky,blue sky,52.7,-2.6,-22.5,22.7,263.5,-20.0,2.8,0.2,6.1,3.48
+Gold pushed,Frontier,foliage,foliage,40.5,-17.7,25.3,30.8,124.9,43.0,-2.7,5.3,4.1,3.70
+Gold pushed,Frontier,neutral_8,neutral 8,81.5,1.7,0.8,1.8,26.1,-0.8,0.2,1.1,178.4,3.55
+Gold pushed,Frontier,neutral_5,neutral 5,54.3,4.2,2.3,4.8,28.7,-1.9,3.4,4.5,148.2,7.07
+Gold pushed,Frontier,neutral_3.5,neutral 3.5,33.0,0.4,-0.7,0.8,295.6,-1.1,-2.6,-0.5,44.4,2.46
+Gold pushed,Noritsu,skin_dark,dark skin,39.0,25.7,25.5,36.2,44.8,-0.2,1.0,16.7,-1.3,7.63
+Gold pushed,Noritsu,skin_light,light skin,67.2,21.5,21.2,30.2,44.7,-0.2,1.5,4.8,0.2,2.46
+Gold pushed,Noritsu,sky,blue sky,53.2,-2.5,-15.6,15.8,260.9,-13.1,3.2,-6.7,3.5,5.19
+Gold pushed,Noritsu,foliage,foliage,43.7,-12.1,26.3,28.9,114.7,38.4,0.6,3.4,-6.1,2.64
+Gold pushed,Noritsu,neutral_8,neutral 8,79.8,0.6,1.2,1.4,62.7,0.6,-1.5,0.7,-145.0,2.60
+Gold pushed,Noritsu,neutral_5,neutral 5,52.7,2.7,4.7,5.4,60.0,2.0,1.9,5.1,179.5,6.12
+Gold pushed,Noritsu,neutral_3.5,neutral 3.5,34.2,3.5,2.8,4.5,38.4,-0.7,-1.5,3.2,147.3,6.62
