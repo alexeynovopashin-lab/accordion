@@ -1,157 +1,234 @@
-<title>Комплементарный круг</title>
+<title>Accordion beta</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: neutral-grey colour bench — a mid-grey stage for the photo on the left, an instrument column (OkLab wheel, readout, controls) on the right; stacks to one column below 980px. Neutrals are deliberately achromatic so the UI never biases colour judgement. */
+/* Shell in the Light Plan manner: squircle plates, glass = fill + 1.5px inner bevel + own cast shadow, blur only where the photo
+   can slide underneath (the sticky top bar). Unlike Light Plan every grey here is achromatic (R=G=B, Lab a=b=0) and the glass has
+   no saturate(): warm or tinted chrome around a photo biases colour judgement. The photo sits on a mid-grey stage. Dark by default. */
 :root{
-  --bg:#ebebeb;
-  --panel:#f6f6f6;
-  --fg:#1a1a1a;
-  --muted:#626262;
-  --line:#d0d0d0;
-  --stage:#777777;
-  --on-stage:#f5f5f5;
-  --ink-inv:#f6f6f6;
+  --bg:#121212;
+  --panel:#202020;          /* plate: #121212 + 7% white, the Light Plan glass fill on a flat ground */
+  --well:#181818;           /* recessed: segment tracks, readout cells, inputs */
+  --raise:#2e2e2e;          /* buttons */
+  --seg-on:#3c3c3c;
+  --fg:#ececec;
+  --muted:#9a9a9a;
+  --line:#363636;
+  --stage:#575757;
+  --on-stage:#f2f2f2;
+  --ink-inv:#121212;
+  --rail:#3a3a3a; --rail-on:#a8a8a8; --knob:#fafafa;
+  --bar:rgba(18,18,18,.72);
+  --shine:rgba(255,255,255,.30);      /* bevel on controls, as Light Plan --glass-shine */
+  --shine-plate:rgba(255,255,255,.12);/* bevel on large plates: .30 across a 380px plate reads as a white stripe */
+  --hair:rgba(255,255,255,.06);
+  --cast:rgba(0,0,0,.45);
   --font-ui:"Golos Text", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-data:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#1c1c1c; --panel:#242424; --fg:#e8e8e8; --muted:#9a9a9a; --line:#383838;
-    --stage:#575757; --on-stage:#f2f2f2; --ink-inv:#1c1c1c; color-scheme:dark;
-  }
+:root[data-theme="light"]{
+  --bg:#e9e9e9; --panel:#f7f7f7; --well:#e2e2e2; --raise:#ffffff; --seg-on:#ffffff;
+  --fg:#1a1a1a; --muted:#5e5e5e; --line:#d0d0d0; --stage:#777777; --on-stage:#f5f5f5; --ink-inv:#f7f7f7;
+  --rail:#cfcfcf; --rail-on:#4a4a4a; --knob:#ffffff;
+  --bar:rgba(247,247,247,.78); --shine:rgba(255,255,255,.95); --shine-plate:rgba(255,255,255,.95);
+  --hair:rgba(0,0,0,.07); --cast:rgba(0,0,0,.16);
+  color-scheme:light;
 }
-:root[data-theme="dark"]{
-  --bg:#1c1c1c; --panel:#242424; --fg:#e8e8e8; --muted:#9a9a9a; --line:#383838;
-  --stage:#575757; --on-stage:#f2f2f2; --ink-inv:#1c1c1c; color-scheme:dark;
-}
-html,body{background:var(--bg);color:var(--fg)}
-body{font-family:var(--font-ui);font-size:14px;line-height:1.45}
-.wrap{max-width:1440px;margin:0 auto;padding-block:20px 32px;padding-inline:16px;display:grid;gap:16px}
-header{display:grid;gap:4px}
-h1{font-size:20px;font-weight:600;margin:0;text-wrap:balance;letter-spacing:-.01em}
-.lead{margin:0;color:var(--muted);max-width:72ch}
-.main{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
-@media (min-width:980px){.main{grid-template-columns:minmax(0,1fr) 380px}}
-.stage{background:var(--stage);border-radius:6px;display:flex;flex-direction:column;min-width:0}
-.toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:10px;align-items:center;color:var(--on-stage)}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg);margin:0}
+body{font-family:var(--font-ui);font-size:14px;line-height:1.45;-webkit-text-size-adjust:100%}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.wrap{max-width:1480px;margin:0 auto;padding:8px max(16px,env(safe-area-inset-right)) 32px max(16px,env(safe-area-inset-left));display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+
+/* top bar: the one glass with blur — page content and the photo scroll under it */
+.topbar{position:sticky;top:max(8px,env(safe-area-inset-top));z-index:20;display:flex;align-items:center;gap:8px;padding:8px;
+  background:var(--bar);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  border-radius:20px;corner-shape:squircle;box-shadow:0 10px 30px var(--cast),inset 0 1.5px 0 var(--shine-plate),inset 0 0 0 1px var(--hair)}
+.brand{display:flex;align-items:baseline;gap:6px;padding:0 8px 0 6px;font-weight:600;font-size:16px;letter-spacing:-.01em;white-space:nowrap}
+.brand small{font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.04em}
+.topbar .grow{flex:1}
+.topbar .gap{width:4px}
+
+.main{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
+@media (min-width:980px){.main{grid-template-columns:minmax(0,1fr) 384px}}
+.left{display:grid;gap:14px;align-content:start;min-width:0}
+.side{display:grid;gap:12px;align-content:start;min-width:0}
+
+/* photo stage: mid-grey achromatic surround (Kosenko ch.15: the surround shifts perceived saturation) */
+.stage{background:var(--stage);border-radius:22px;corner-shape:squircle;display:flex;flex-direction:column;min-width:0;
+  box-shadow:0 10px 30px var(--cast),inset 0 1.5px 0 rgba(255,255,255,.14)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:10px 10px 8px;align-items:center;color:var(--on-stage)}
 .toolbar .lbl{font-size:12px;opacity:.85;margin-left:4px}
-.canvas-box{display:flex;margin:0 12px 12px;min-height:240px;max-height:min(78vh,940px);overflow:auto;overscroll-behavior:contain}
+.canvas-box{display:flex;margin:0 12px 10px;min-height:240px;max-height:min(78vh,940px);overflow:auto;overscroll-behavior:contain;border-radius:10px;corner-shape:squircle}
 #img{display:block;margin:auto;max-width:100%;max-height:min(74vh,900px);width:auto;height:auto;cursor:crosshair;flex:none}
 #img.zoomed{max-width:none;max-height:none}
 #img.zoomed.px{image-rendering:pixelated}
 #img.panning{cursor:grabbing}
 .zoombar{display:flex;align-items:center;gap:6px;margin-left:auto}
 .zoombar .zv{font-family:var(--font-data);font-size:12px;min-width:46px;text-align:center}
-.foldbar{display:flex;gap:8px;justify-content:flex-end}
-.foldbar .btn{padding:4px 9px;font-size:12px}
-.panel>h2.fold{cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;gap:8px}
-.panel>h2.fold::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin-top:-3px;transition:transform .15s;flex:none}
-.panel>h2.fold:focus-visible{outline:2px solid var(--fg);outline-offset:3px;border-radius:3px}
+.status{font-family:var(--font-data);font-size:12px;color:var(--on-stage);padding:0 14px 12px;min-height:18px;opacity:.9}
+
+/* plates */
+.panel{background:var(--panel);border-radius:20px;corner-shape:squircle;padding:16px;display:grid;gap:12px;min-width:0;
+  box-shadow:0 10px 30px var(--cast),inset 0 1.5px 0 var(--shine-plate),inset 0 0 0 1px var(--hair)}
+.panel h2{font-size:15px;font-weight:600;margin:0;letter-spacing:-.005em;color:var(--fg)}
+.panel>h2.fold{cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;min-height:24px}
+.panel>h2.fold::after{content:"";margin-left:auto;width:7px;height:7px;border-right:1.6px solid var(--muted);border-bottom:1.6px solid var(--muted);transform:rotate(45deg);margin-top:-4px;transition:transform .2s;flex:none}
+.panel>h2.fold:focus-visible{outline:2px solid var(--fg);outline-offset:4px;border-radius:6px}
 .panel.collapsed{gap:0}
 .panel.collapsed>:not(h2){display:none}
 .panel.collapsed>h2.fold::after{transform:rotate(-45deg);margin-top:0}
-.status{font-family:var(--font-data);font-size:12px;color:var(--on-stage);padding:0 12px 12px;min-height:18px;opacity:.9}
-.side{display:grid;gap:12px;align-content:start;min-width:0}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;display:grid;gap:12px;min-width:0}
-.panel h2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0}
+.soon{font-size:11px;font-weight:500;color:var(--muted);background:var(--well);border-radius:999px;padding:2px 8px}
+.sidehead{display:flex;align-items:center;gap:6px;padding:0 4px}
+.sidehead span{font-size:12px;color:var(--muted);margin-right:auto}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;background:var(--raise);color:var(--fg);
+  border-radius:12px;corner-shape:squircle;padding:8px 12px;min-height:36px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;
+  box-shadow:inset 0 1.5px 0 var(--shine-plate),inset 0 0 0 1px var(--hair),0 2px 6px var(--cast)}
+.btn.icon{padding:8px;min-width:36px}
+.btn.primary{background:var(--fg);color:var(--ink-inv);box-shadow:inset 0 1.5px 0 var(--shine),0 2px 6px var(--cast)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn[hidden]{display:none}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.stage .btn{background:rgba(255,255,255,.12);color:var(--on-stage);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.18),0 2px 6px rgba(0,0,0,.25)}
+.file{position:relative;overflow:hidden}
+.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+/* segmented control, Light Plan .seg: track r12 pad 3, buttons r10 */
+.seg{display:flex;background:var(--well);border-radius:12px;corner-shape:squircle;padding:3px;gap:2px;min-width:0}
+.seg button{flex:1;background:none;border:0;border-radius:10px;corner-shape:squircle;padding:7px 10px;min-height:32px;color:var(--muted);
+  font:inherit;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .2s,color .2s}
+.seg button[aria-pressed="true"]{background:var(--seg-on);color:var(--fg);box-shadow:inset 0 1.5px 0 var(--shine-plate),0 1px 4px var(--cast)}
+.stage .seg{background:rgba(0,0,0,.22)}
+.stage .seg button{color:rgba(255,255,255,.78)}
+.stage .seg button[aria-pressed="true"]{background:rgba(255,255,255,.88);color:#1e1e1e;box-shadow:inset 0 1.5px 0 #fff,0 1px 4px rgba(0,0,0,.3)}
+.topbar .seg button{padding:6px 12px}
+.stage .seg.wrapseg{flex-wrap:wrap}
+
+/* switches: Light Plan .toggle geometry (51x31, knob 27), neutral rails instead of brass */
+.check{display:flex;align-items:center;gap:12px;font-size:13px;cursor:pointer}
+.check input,.tog .sw{appearance:none;-webkit-appearance:none;margin:0;flex:none;position:relative;width:51px;height:31px;border-radius:999px;background:var(--rail);cursor:pointer;transition:background .25s}
+.check input::after,.tog .sw::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:var(--knob);box-shadow:0 2px 5px rgba(0,0,0,.35);transition:transform .25s}
+.check input:checked{background:var(--rail-on)}
+.check input:checked::after{transform:translateX(20px)}
+.tog{display:inline-flex;align-items:center;gap:8px;background:none;border:0;padding:2px 4px;font:inherit;font-size:13px;color:inherit;cursor:pointer}
+.tog .sw{width:40px;height:24px;background:rgba(0,0,0,.28)}
+.tog .sw::after{width:20px;height:20px}
+.tog[aria-pressed="true"] .sw{background:rgba(255,255,255,.7)}
+.tog[aria-pressed="true"] .sw::after{transform:translateX(16px)}
+
+/* sliders */
+.slider{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:center}
+.slider label{font-size:13px}
+.slider output{font-family:var(--font-data);font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.slider input[type=range]{grid-column:1/-1;width:100%;margin:4px 0;height:24px;background:none;-webkit-appearance:none;appearance:none;cursor:pointer;touch-action:pan-y}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--rail)}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--rail)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--knob);margin-top:-9px;box-shadow:0 2px 5px rgba(0,0,0,.4),0 0 0 .5px rgba(0,0,0,.25)}
+input[type=range]::-moz-range-thumb{width:22px;height:22px;border:0;border-radius:50%;background:var(--knob);box-shadow:0 2px 5px rgba(0,0,0,.4)}
+
+/* readouts */
 #wheel{width:100%;max-width:352px;aspect-ratio:1/1;display:block;margin:0 auto;touch-action:none;cursor:grab}
 .legend{font-size:12px;color:var(--muted);margin:0}
-.readout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
-.cell{display:grid;gap:1px;min-width:0}
+.readout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cell{display:grid;gap:2px;min-width:0;background:var(--well);border-radius:12px;corner-shape:squircle;padding:8px 10px}
 .cell span{font-size:11px;color:var(--muted)}
-.cell b{font-family:var(--font-data);font-weight:500;font-size:14px;font-variant-numeric:tabular-nums}
+.cell b{font-family:var(--font-data);font-weight:500;font-size:13px;font-variant-numeric:tabular-nums}
 .verdict{display:flex;align-items:center;gap:8px;font-size:13px}
 .dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--fg);flex:none}
 .dot.ok{background:var(--fg)}
 .dot.near{background:linear-gradient(90deg,var(--fg) 50%,transparent 50%)}
-.slider{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center}
-.slider label{font-size:13px}
-.slider output{font-family:var(--font-data);font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted)}
-.slider input[type=range]{grid-column:1/-1;width:100%;margin:2px 0;accent-color:var(--fg)}
-.seg{display:flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
-.seg button{flex:1;background:transparent;border:0;border-right:1px solid var(--line);padding:7px 8px;color:var(--fg);font:inherit;font-size:13px;cursor:pointer}
-.seg button:last-child{border-right:0}
-.seg button[aria-pressed="true"]{background:var(--fg);color:var(--ink-inv)}
-.stage .seg{border-color:rgba(255,255,255,.35)}
-.stage .seg button{color:var(--on-stage);border-right-color:rgba(255,255,255,.35)}
-.stage .seg button[aria-pressed="true"]{background:var(--on-stage);color:#333}
-.btn{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:5px;padding:7px 11px;font:inherit;font-size:13px;cursor:pointer}
-.btn.primary{background:var(--fg);color:var(--ink-inv);border-color:var(--fg)}
-.btn:disabled{opacity:.45;cursor:default}
-.btns{display:flex;flex-wrap:wrap;gap:8px}
-.check{display:flex;align-items:center;gap:8px;font-size:13px}
-.check input{accent-color:var(--fg);width:16px;height:16px}
-.note{font-size:12px;color:var(--muted);margin:0}
-.file{position:relative;overflow:hidden}
-.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
-:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
-.stage :focus-visible{outline-color:var(--on-stage)}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.left{display:grid;gap:12px;align-content:start;min-width:0}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.note{font-size:12px;color:var(--muted);margin:0}
+.sub{font-size:12px;font-weight:600;margin:0;color:var(--muted)}
+.kv{font-family:var(--font-data);font-size:12px;font-variant-numeric:tabular-nums;margin:0;display:grid;gap:3px}
+.kv span{color:var(--muted);font-family:var(--font-ui)}
+.target{display:flex;align-items:center;gap:8px;font-size:13px;flex-wrap:wrap}
+.target input{width:62px;font:inherit;font-family:var(--font-data);font-size:13px;padding:6px 8px;border:0;border-radius:9px;corner-shape:squircle;background:var(--well);color:var(--fg);box-shadow:inset 0 0 0 1px var(--hair)}
+.lvl{display:grid;gap:2px;background:var(--well);border-radius:12px;corner-shape:squircle;padding:8px}
+.lvl span{font-size:11px;color:var(--muted)}
+.lvl b{font-family:var(--font-data);font-weight:500;font-size:12px;font-variant-numeric:tabular-nums}
+.lvl .dot{width:10px;height:10px}
+.lvl .head{display:flex;align-items:center;gap:6px}
+hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 4px 3px 10px;font-size:12px;background:var(--well);box-shadow:inset 0 0 0 1px var(--hair)}
+.chip button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:15px;line-height:1;cursor:pointer;padding:2px 7px;border-radius:999px}
+.chip button:hover{color:var(--fg)}
 .tablebox{overflow-x:auto}
 .mtable{width:100%;border-collapse:collapse;font-family:var(--font-data);font-size:12px;font-variant-numeric:tabular-nums}
 .mtable th{font-family:var(--font-ui);font-weight:500;color:var(--muted);text-align:left;padding:4px 8px 6px;font-size:11px}
 .mtable td{padding:6px 8px;border-top:1px solid var(--line);white-space:nowrap;vertical-align:top}
 .mtable td:first-child{font-family:var(--font-ui);font-size:13px}
 .mtable .dim{color:var(--muted)}
-.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.stage .seg.wrapseg{flex-wrap:wrap}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 10px;font-size:12px;background:var(--bg)}
-.chip button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:14px;line-height:1;cursor:pointer;padding:0 6px;border-radius:999px}
-.chip button:hover{color:var(--fg)}
-.sub{font-size:12px;font-weight:600;margin:0}
-.kv{font-family:var(--font-data);font-size:12px;font-variant-numeric:tabular-nums;margin:0;display:grid;gap:3px}
-.kv span{color:var(--muted);font-family:var(--font-ui)}
-.target{display:flex;align-items:center;gap:8px;font-size:13px;flex-wrap:wrap}
-.target input{width:58px;font:inherit;font-family:var(--font-data);font-size:13px;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}
-.lvl{display:grid;gap:2px;border:1px solid var(--line);border-radius:5px;padding:8px}
-.lvl span{font-size:11px;color:var(--muted)}
-.lvl b{font-family:var(--font-data);font-weight:500;font-size:12px;font-variant-numeric:tabular-nums}
-.lvl .dot{width:10px;height:10px}
-.lvl .head{display:flex;align-items:center;gap:6px}
-hr.sep{border:0;border-top:1px solid var(--line);margin:0}
+:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.stage :focus-visible{outline-color:var(--on-stage)}
+
+/* phone: one column — photo, tools, then the measurement table; icon-only top bar */
+@media (max-width:979px){
+  .left{display:contents}
+  .stage{order:1}.side{order:2}.measures{order:3}
+}
+@media (max-width:640px){
+  .wrap{gap:12px}
+  .topbar{gap:4px;padding:6px}
+  .topbar .t,.brand{display:none}
+  .topbar .btn{min-width:34px;min-height:34px;padding:7px}
+  .topbar .seg button{padding:6px 10px}
+  .stage{border-radius:18px}
+  .toolbar{padding:8px 8px 6px;gap:6px}
+  .toolbar .lbl{display:none}
+  .stage .seg.wrapseg{width:100%}
+  .stage .seg.wrapseg button{flex:1 1 22%;padding:7px 4px}
+  .zoombar{margin-left:0;width:100%;justify-content:space-between}
+  .canvas-box{margin:0 8px 8px}
+  .panel{padding:14px;border-radius:18px}
+}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 
 <div class="wrap">
-  <header>
-    <h1>Комплементарный круг</h1>
-    <p class="lead">Два шага. Нормализация: маркеры на нейтралях задают свет, маркер кожи — её тон и насыщенность, каждое отдельно. Гармония: основная нота и противоположные ей цвета двигаются вместе по кругу OkLab, а маркеры кожи, губ, неба и листвы держат свои цвета. Пример: ваш тестовый портрет с мишенью, маркеры уже расставлены.</p>
+  <header class="topbar" aria-label="Снимок и история">
+    <div class="brand" title="Комплементарный круг: правка цвета через отношения цветов">Accordion <small>БЕТА</small></div>
+    <label class="btn icon file" title="Загрузить снимок (JPEG, PNG, WebP)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg><input id="fileIn" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Загрузить снимок"></label>
+    <div class="seg" role="group" aria-label="Показ">
+      <button id="vBefore" type="button" aria-pressed="false">До</button>
+      <button id="vAfter" type="button" aria-pressed="true">После</button>
+    </div>
+    <div class="grow"></div>
+    <button class="btn icon" id="undo" type="button" title="Назад (Cmd/Ctrl+Z)" aria-label="Назад" disabled><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+    <button class="btn icon" id="redo" type="button" title="Вперёд (Shift+Cmd/Ctrl+Z)" aria-label="Вперёд" disabled><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+    <button class="btn" id="resetAll" type="button" title="Все регуляторы к исходным значениям, маркеры убираются. Отменяется кнопкой «Назад»." aria-label="Сбросить всё"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/></svg><span class="t">Сбросить</span></button>
+    <button class="btn icon" id="themeBtn" type="button" title="Светлая / тёмная тема" aria-label="Сменить тему"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg></button>
+    <button class="btn primary" id="saveJpg" type="button" title="Сохранить снимок в полном размере (JPG)" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/></svg><span class="t">Сохранить</span></button>
   </header>
 
   <div class="main">
     <div class="left">
     <section class="stage" aria-label="Снимок">
       <div class="toolbar">
-        <label class="btn file">Загрузить снимок<input id="fileIn" type="file" accept="image/jpeg,image/png,image/webp"></label>
-        <div class="seg" role="group" aria-label="Показ">
-          <button id="vBefore" type="button" aria-pressed="false">До</button>
-          <button id="vAfter" type="button" aria-pressed="true">После</button>
-        </div>
-        <button class="btn" id="tClouds" type="button" aria-pressed="false">Облака маркеров</button>
-        <button class="btn" id="undo" type="button" title="Cmd/Ctrl+Z" disabled>← Назад</button>
-        <button class="btn" id="redo" type="button" title="Shift+Cmd/Ctrl+Z" disabled>Вперёд →</button>
-        <button class="btn" id="resetAll" type="button" title="Все регуляторы к исходным значениям, маркеры убираются. Отменяется кнопкой «Назад».">Сбросить всё</button>
-        <button class="btn primary" id="saveJpg" type="button" hidden>Сохранить снимок</button>
-      </div>
-      <div class="toolbar" style="padding-top:0">
         <span class="lbl">Щелчок ставит:</span>
         <div class="seg wrapseg" role="group" aria-label="Что ставит щелчок по снимку">
-          <button id="pBase" type="button" aria-pressed="true">Ноту</button>
-          <button id="pNeutral" type="button" aria-pressed="false">Нейтраль</button>
-          <button id="pSkin" type="button" aria-pressed="false">Кожу</button>
-          <button id="pLips" type="button" aria-pressed="false">Губы</button>
-          <button id="pSky" type="button" aria-pressed="false">Небо</button>
-          <button id="pFoliage" type="button" aria-pressed="false">Листву</button>
-          <button id="pHold" type="button" aria-pressed="false">Цвет</button>
+          <button id="pBase" type="button" aria-pressed="true" title="Основная нота аккорда — цвет под щелчком">Ноту</button>
+          <button id="pNeutral" type="button" aria-pressed="false" title="Маркер нейтрали: по ним выравнивается свет">Нейтраль</button>
+          <button id="pSkin" type="button" aria-pressed="false" title="Маркер кожи: тон и насыщенность кожи">Кожу</button>
+          <button id="pLips" type="button" aria-pressed="false" title="Маркер губ: цвет держится при повороте аккорда">Губы</button>
+          <button id="pSky" type="button" aria-pressed="false" title="Маркер неба: цвет держится при повороте аккорда">Небо</button>
+          <button id="pFoliage" type="button" aria-pressed="false" title="Маркер листвы: цвет держится при повороте аккорда">Листву</button>
+          <button id="pHold" type="button" aria-pressed="false" title="Любой цвет, который держать на месте">Цвет</button>
         </div>
+      </div>
+      <div class="toolbar" style="padding-top:0">
+        <button class="tog" id="tClouds" type="button" aria-pressed="false" title="Показать облака маркеров — пиксели, по которым считается каждый маркер"><span class="sw" aria-hidden="true"></span>Облака маркеров</button>
         <div class="zoombar" role="group" aria-label="Масштаб снимка">
-          <button class="btn" id="zOut" type="button" title="Уменьшить">−</button>
+          <button class="btn icon" id="zOut" type="button" title="Уменьшить" aria-label="Уменьшить"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg></button>
           <span class="zv" id="zVal">100%</span>
-          <button class="btn" id="zIn" type="button" title="Увеличить">+</button>
+          <button class="btn icon" id="zIn" type="button" title="Увеличить" aria-label="Увеличить"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12M12 6v12"/></svg></button>
           <button class="btn" id="zFit" type="button" title="Весь кадр в окне">По размеру</button>
           <button class="btn" id="zOne" type="button" title="1 пиксель превью = 1 пиксель экрана">1:1</button>
         </div>
@@ -159,8 +236,8 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
       <div class="canvas-box"><canvas id="img" aria-label="Снимок; щелчок задаёт ноту или ставит маркер"></canvas></div>
       <div class="status" id="status" aria-live="polite"></div>
     </section>
-    <section class="panel" aria-label="Замеры">
-      <h2>Замеры: исходно → нормализация → итог</h2>
+    <section class="panel measures" aria-label="Замеры">
+      <h2 title="Lab D50 по облакам маркеров: исходно → после нормализации → итог с аккордом">Замеры по маркерам</h2>
       <div class="tablebox"><table class="mtable">
         <thead><tr><th>Облако</th><th>Исходно</th><th>После нормализации</th><th>Итог с аккордом</th></tr></thead>
         <tbody id="mBody"><tr><td colspan="4" class="dim">Нет маркеров.</td></tr></tbody>
@@ -169,21 +246,24 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
     </section>
     </div>
 
-    <aside class="side">
-      <div class="foldbar"><button class="btn" id="foldAll" type="button">Свернуть все</button><button class="btn" id="unfoldAll" type="button">Развернуть все</button></div>
-      <section class="panel" aria-label="Нормализация">
-        <h2>1 · Нормализация</h2>
+    <aside class="side" aria-label="Инструменты">
+      <div class="sidehead"><span>Инструменты</span>
+        <button class="btn icon" id="foldAll" type="button" title="Свернуть все" aria-label="Свернуть все"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5-5 5 5M7 19l5-5 5 5"/></svg></button>
+        <button class="btn icon" id="unfoldAll" type="button" title="Развернуть все" aria-label="Развернуть все"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 5 5 5 5-5M7 14l5 5 5-5"/></svg></button>
+      </div>
+      <section class="panel" aria-label="Свет и кожа">
+        <h2 title="Нормализация кадра: свет по нейтралям, кожа — тон и насыщенность отдельно">1 · Свет и кожа</h2>
         <div class="chips" id="chips"></div>
         <p class="note" id="chipsNote">Маркеров нет. Выберите тип над снимком и щёлкните по предмету. Маркеры одного типа складываются в одно облако.</p>
 
         <hr class="sep">
-        <p class="sub">Свет — по нейтралям</p>
-        <div class="slider"><label for="sWb">Баланс по нейтралям</label><output id="oWb"></output><input id="sWb" type="range" min="0" max="1" step="0.05"></div>
+        <p class="sub">Свет — по серым предметам</p>
+        <div class="slider"><label for="sWb" title="Баланс белого по маркерам нейтрали: 0 — не трогать, 100% — серые становятся серыми">Баланс по нейтралям</label><output id="oWb"></output><input id="sWb" type="range" min="0" max="1" step="0.05"></div>
         <div class="kv" id="wbInfo"><span>—</span></div>
 
         <hr class="sep">
         <p class="sub">Кожа — тон и насыщенность отдельно</p>
-        <div class="target">Цель на светлой части:
+        <div class="target" title="Цель для светлой части кожи в Lab D50 (a — к красному, b — к жёлтому)">Цель на светлой части:
           <label>a <input id="tA" type="number" step="0.5" min="0" max="40"></label>
           <label>b <input id="tB" type="number" step="0.5" min="0" max="40"></label>
           <output id="oTarget" class="note"></output>
@@ -200,13 +280,13 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
         <p class="note" id="wbOnly">—</p>
 
         <hr class="sep">
-        <p class="sub">Реперные нейтрали в итоге</p>
+        <p class="sub" title="Доля кадра с насыщенностью ниже 8 (Lab) и медианный оттенок этих пикселей">Чёрное, серое и белое в итоге</p>
         <div class="grid3">
           <div class="lvl"><div class="head"><span class="dot" id="dBlack"></span><span>Чёрное, L&lt;20</span></div><b id="lBlack">—</b></div>
           <div class="lvl"><div class="head"><span class="dot" id="dGrey"></span><span>Серое</span></div><b id="lGrey">—</b></div>
           <div class="lvl"><div class="head"><span class="dot" id="dWhite"></span><span>Белое, L&gt;75</span></div><b id="lWhite">—</b></div>
         </div>
-        <p class="note">Доля кадра с насыщенностью ниже 8 (Lab) и медианный оттенок этих пикселей. Закрашенная точка: уровень есть и чист (отклонение меньше 2.5).</p>
+        <p class="note">Доля кадра почти без цвета и её оттенок. Закрашенная точка: уровень есть и чист (отклонение меньше 2.5).</p>
       </section>
 
       <section class="panel" aria-label="Круг">
@@ -229,9 +309,9 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
       <section class="panel" aria-label="Аккорд">
         <h2>Аккорд</h2>
         <div class="seg" role="group" aria-label="Схема">
-          <button id="mPair" type="button" aria-pressed="true">Пара</button>
-          <button id="mSplit" type="button" aria-pressed="false">Расщеплённая</button>
-          <button id="mTriad" type="button" aria-pressed="false">Триада</button>
+          <button id="mPair" type="button" aria-pressed="true" title="Основная нота и противоположная ей">Пара</button>
+          <button id="mSplit" type="button" aria-pressed="false" title="Основная нота и две соседние с противоположной">Расщеплённая</button>
+          <button id="mTriad" type="button" aria-pressed="false" title="Три ноты через 120°">Триада</button>
         </div>
         <div class="slider"><label for="sBase">Основная нота</label><output id="oBase"></output><input id="sBase" type="range" min="0" max="359" step="1"></div>
       </section>
@@ -242,28 +322,33 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
         <div class="slider"><label for="sRotOpp">Сдвиг противоположной ноты</label><output id="oRotOpp"></output><input id="sRotOpp" type="range" min="-60" max="60" step="1"></div>
         <div class="slider"><label for="sSpread">Раскрытие вокруг оси</label><output id="oSpread"></output><input id="sSpread" type="range" min="-30" max="30" step="1"></div>
         <div class="grid2">
-          <div class="slider"><label for="sCore">Ядро зоны</label><output id="oCore"></output><input id="sCore" type="range" min="6" max="40" step="1"></div>
-          <div class="slider"><label for="sFall">Затухание</label><output id="oFall"></output><input id="sFall" type="range" min="10" max="60" step="1"></div>
+          <div class="slider"><label for="sCore" title="Ядро зоны: в этих пределах оттенки поворачиваются полностью">Ширина зоны</label><output id="oCore"></output><input id="sCore" type="range" min="6" max="40" step="1"></div>
+          <div class="slider"><label for="sFall" title="Затухание: на сколько градусов за ядром поворот сходит на нет">Мягкость края</label><output id="oFall"></output><input id="sFall" type="range" min="10" max="60" step="1"></div>
         </div>
       </section>
 
-      <section class="panel" aria-label="Закрепления">
-        <h2>Закрепления</h2>
-        <div class="slider"><label for="sNeutral">Нейтрали: порог насыщенности</label><output id="oNeutral"></output><input id="sNeutral" type="range" min="0" max="0.06" step="0.002"></div>
+      <section class="panel" aria-label="Кривая" data-closed>
+        <h2>Кривая <span class="soon">скоро</span></h2>
+        <p class="note">Здесь будет кривая: следующий инструмент беты. Место в раскладке оставлено.</p>
+      </section>
+
+      <section class="panel" aria-label="Что держать" data-closed>
+        <h2 title="Закрепления: нейтрали и цвета маркеров не поворачиваются вместе с аккордом">Что держать на месте</h2>
+        <div class="slider"><label for="sNeutral" title="Нейтрали: порог насыщенности (OkLab C). Всё, что бледнее, считается серым и не поворачивается">Что считать серым</label><output id="oNeutral"></output><input id="sNeutral" type="range" min="0" max="0.06" step="0.002"></div>
         <label class="check"><input id="cSkin" type="checkbox"> Держать цвета маркеров (кожа, губы, небо, листва)</label>
-        <div class="slider"><label for="sSkinStr">Сила закреплений</label><output id="oSkinStr"></output><input id="sSkinStr" type="range" min="0" max="1" step="0.05"></div>
+        <div class="slider"><label for="sSkinStr" title="Сила закреплений: какую долю сдвига аккорда гасить на маркерах">Сила удержания</label><output id="oSkinStr"></output><input id="sSkinStr" type="range" min="0" max="1" step="0.05"></div>
         <div class="kv" id="pinInfo"><span>—</span></div>
         <p class="note">Без маркера кожи действует зона кожи по вашей таблице обложек (48° OkLCh ±8°). Строки выше: на сколько аккорд сдвигает цвет маркера и сколько из этого сдвига закрепление гасит.</p>
       </section>
 
-      <section class="panel" aria-label="Экспорт">
-        <h2>Экспорт</h2>
+      <section class="panel" aria-label="Сохранить" data-closed>
+        <h2 title="Экспорт: LUT .cube в архиве .zip и снимок PNG">Сохранить LUT и снимок</h2>
         <div class="grid2">
-          <div class="seg" role="group" aria-label="Пространство LUT">
+          <div class="seg" role="group" aria-label="Пространство LUT" title="Цветовое пространство снимка, к которому применят LUT">
             <button id="spS" type="button" aria-pressed="true">sRGB</button>
             <button id="spP" type="button" aria-pressed="false">Display P3</button>
           </div>
-          <div class="seg" role="group" aria-label="Размер LUT">
+          <div class="seg" role="group" aria-label="Размер LUT" title="Узлов на сторону куба: 65 точнее, 33 — для программ, которые больше не берут">
             <button id="n33" type="button" aria-pressed="false">33</button>
             <button id="n65" type="button" aria-pressed="true">65</button>
           </div>
@@ -274,6 +359,11 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
           <button class="btn" id="copyLut" type="button" hidden>Скопировать LUT как текст</button>
         </div>
         <p class="note" id="exportNote">LUT рассчитан на снимок в выбранном пространстве. Для Lightroom его встраивают в творческий профиль через Camera Raw в Photoshop; Resolve и Photoshop открывают .cube напрямую.</p>
+      </section>
+
+      <section class="panel" aria-label="Как пользоваться" data-closed>
+        <h2>Как пользоваться</h2>
+        <p class="note">Два шага. Нормализация: маркеры на нейтралях задают свет, маркер кожи — её тон и насыщенность, каждое отдельно. Гармония: основная нота и противоположные ей цвета двигаются вместе по кругу OkLab, а маркеры кожи, губ, неба и листвы держат свои цвета. Пример: ваш тестовый портрет с мишенью, маркеры уже расставлены.</p>
       </section>
     </aside>
   </div>
@@ -1205,7 +1295,7 @@ function saveFolds(){ try { localStorage.setItem(FOLD_KEY, JSON.stringify(folds)
 panels.forEach((p, i) => {
   const h = p.firstElementChild; h.classList.add("fold"); h.setAttribute("role","button"); h.tabIndex = 0;
   const key = h.textContent.trim().slice(0, 24);
-  setFold(p, !!folds[key]);
+  setFold(p, key in folds ? !!folds[key] : p.hasAttribute("data-closed"));
   const toggle = () => { const c = !p.classList.contains("collapsed"); setFold(p, c); folds[key] = c; saveFolds(); };
   h.addEventListener("click", toggle);
   h.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); toggle(); } });
@@ -1214,6 +1304,15 @@ panels.forEach((p, i) => {
 function foldAll(c){ panels.forEach(p => { setFold(p, c); folds[p._key] = c; }); saveFolds(); }
 $("foldAll").addEventListener("click", () => foldAll(true));
 $("unfoldAll").addEventListener("click", () => foldAll(false));
+
+/* ---------- theme: dark by default, light on request (the wheel redraws via the data-theme observer below) ---------- */
+const THEME_KEY = "accordion.theme";
+try { if (localStorage.getItem(THEME_KEY) === "light") document.documentElement.dataset.theme = "light"; } catch(e){}
+$("themeBtn").addEventListener("click", () => {
+  const t = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem(THEME_KEY, t); } catch(e){}
+});
 
 /* ---------- boot ---------- */
 function relayout(){ makeDisc(); drawWheel(); }
