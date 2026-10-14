@@ -21,6 +21,6 @@ out = open(os.path.join(HERE, "complement.html"), encoding="utf-8").read().repla
 os.makedirs(os.path.join(HERE, "build"), exist_ok=True)
 open(os.path.join(HERE, "build", "complement_built.html"), "w", encoding="utf-8").write(out)
 i = out.rfind("})();")
-hooks = "window.__t={P,prepAll,normLch,transformHue,get NM(){return NM},get PINS(){return PINS}};\n"
+hooks = "window.__t={P,prepAll,normLch,transformHue,get NM(){return NM},get PINS(){return PINS},xf,pchip,softLight,chanTable,curveMove,curveAdd,curveDel,prepCurves,defaultCurves,get CV(){return CV}};\n"
 open(os.path.join(HERE, "build", "test_built.html"), "w", encoding="utf-8").write(out[:i] + hooks + out[i:])
 print("built", os.path.join(HERE, "build"))

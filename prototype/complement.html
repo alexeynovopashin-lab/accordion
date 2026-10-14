@@ -189,6 +189,13 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
   .canvas-box{margin:0 8px 8px}
   .panel{padding:14px;border-radius:18px}
 }
+/* curve tool: graph 256 px plot + 8 px axis strips */
+#cvCv{width:276px;height:276px;display:block;margin:0 auto;touch-action:none;cursor:crosshair;border-radius:8px;user-select:none}
+#img.curvepick{cursor:ns-resize}
+.seg[hidden]{display:none}
+.seg button.mod::after{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;margin-left:5px;vertical-align:middle}
+.cvrow .btn{margin-left:auto}
+.cvrow input:disabled{opacity:.4}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 
@@ -327,9 +334,27 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
         </div>
       </section>
 
-      <section class="panel" aria-label="Кривая" data-closed>
-        <h2>Кривая <span class="soon">скоро</span></h2>
-        <p class="note">Здесь будет кривая: следующий инструмент беты. Место в раскладке оставлено.</p>
+      <section class="panel" aria-label="Кривая" id="curvePanel">
+        <h2 title="Кривые идут после света, кожи, аккорда и закреплений, до сжатия в охват. Входят в LUT и снимок.">Кривая</h2>
+        <div class="seg" role="group" aria-label="Вкладка кривой" id="cvTabs">
+          <button type="button" data-tab="lrgb" aria-pressed="true" title="L — светлота без сдвига цвета (оттенок и хрома OkLab на месте); R, G, B — каналы, как Curves в Photoshop">LRGB</button>
+          <button type="button" data-tab="lab" aria-pressed="false" title="CIELab D50, как в Photoshop: L, a (зелёный ↔ пурпурный), b (синий ↔ жёлтый)">Lab</button>
+          <button type="button" data-tab="soft" aria-pressed="false" title="Серый слой в режиме наложения «Мягкий свет» (Soft Light): горизонтальная кривая — без изменений; меняется только светлота">Мягкая</button>
+        </div>
+        <div class="seg" role="group" aria-label="Как править кривую">
+          <button id="cvModeGraph" type="button" aria-pressed="true" title="Точки ставятся и двигаются на графике">По графику</button>
+          <button id="cvModeFrame" type="button" aria-pressed="false" title="Пипетка: наведите на участок снимка и тяните вверх или вниз (targeted adjustment)">По кадру</button>
+        </div>
+        <div class="seg" role="group" aria-label="Канал" id="cvChans"></div>
+        <canvas id="cvCv" tabindex="0" aria-label="График кривой: щелчок ставит точку, перетаскивание двигает, двойной щелчок удаляет"></canvas>
+        <p class="note" id="cvAxis"></p>
+        <div class="target cvrow">
+          <label id="cvInL">Вход <input id="cvIn" type="number" step="1"></label>
+          <label id="cvOutL">Выход <input id="cvOut" type="number" step="1"></label>
+          <button class="btn" id="cvReset" type="button" title="Все каналы этой вкладки — к исходной прямой">Сбросить кривую</button>
+        </div>
+        <div class="kv" id="cvHover"><span>—</span></div>
+        <p class="note" id="cvNote"></p>
       </section>
 
       <section class="panel" aria-label="Что держать" data-closed>
@@ -392,6 +417,7 @@ const PIN_TYPES = ["skin","lips","sky","foliage","hold"];
 let markers = [];      // {type, x, y, idx:Int32Array}
 let NM = null;         // normalisation state, rebuilt by prepNorm()
 let PINS = [];         // harmony pins, rebuilt by prepPins()
+P.curves = defaultCurves();
 const DEFAULTS = Object.assign({}, P);
 const MODE_S = { pair:0, split:30, triad:60 };
 
@@ -623,17 +649,133 @@ function transformHue(L,C,h){
   return x;
 }
 const wnAt = C => smooth((C-P.neutral)/(P.neutral+0.012));
-function xf(r,g,b,space){
+function xfPre(r,g,b,space){ // normalisation, chord and pins: OkLCh before curves and gamut mapping
   let v = [toLin(r),toLin(g),toLin(b)];
   if (space==="p3") v = mul(P3toS, v);
   v = normLin(v);
   const [L,a,bb] = linToOklab(v[0],v[1],v[2]);
   let C = Math.hypot(a,bb), h = Math.atan2(bb,a)/D2R;
   if (C > 1e-5){ const n = normLch(L,C,h); h = transformHue(L,C,n[1]); C = n[0]; }
+  return [L,C,h];
+}
+function xf(r,g,b,space){
+  let [L,C,h] = xfPre(r,g,b,space);
+  if (CV.any){ const c = curveStages(L, C*Math.cos(h*D2R), C*Math.sin(h*D2R), space, null); L = c[0]; C = Math.hypot(c[1],c[2]); h = Math.atan2(c[2],c[1])/D2R; }
   const o = mapToGamut(L,C,h,space);
   return [toEnc(clamp01(o[0])), toEnc(clamp01(o[1])), toEnc(clamp01(o[2]))];
 }
-function prepAll(){ geometry(); prepNorm(); prepPins(); }
+function prepAll(){ geometry(); prepNorm(); prepPins(); prepCurves(); }
+/* ---------- curves: LRGB, Lab, Soft (after chord and pins, before gamut mapping; stages run in tab order) ----------
+   Points are [x,y] in 0..1 sorted by x. Interpolation: monotone cubic Hermite with Fritsch–Butland slopes (scipy PCHIP):
+   no overshoot, so points that rise give a curve that rises. Flat beyond the end points (black/white point), slope 1 outside 0..1.
+   LRGB L: OkLab L only, a and b kept, i.e. OkLab hue and chroma stay (the code had no tonal operation to copy).
+   R, G, B: gamma-encoded working RGB of the output (sRGB, or Display P3 for a P3 LUT), as Curves in Photoshop.
+   Lab: CIELab D50 as in Photoshop; a, b drawn over -128..128. Soft: L' = softLight(L, g(L)), OkLab L, a and b kept. */
+function defaultCurves(){
+  const I = Object.freeze([[0,0],[1,1]]), S = Object.freeze([[0,0.5],[1,0.5]]);
+  return Object.freeze({ lrgb:Object.freeze({ L:I, R:I, G:I, B:I }), lab:Object.freeze({ L:I, a:I, b:I }), soft:Object.freeze({ L:S }) });
+}
+const CT = 1024, XGAP = 1/255;
+function pchip(pts){
+  const n = pts.length, xs = pts.map(p=>p[0]), ys = pts.map(p=>p[1]), h = [], d = [], m = new Array(n);
+  for (let i=0;i<n-1;i++){ h[i] = xs[i+1]-xs[i]; d[i] = (ys[i+1]-ys[i])/h[i]; }
+  m[0] = d[0]; m[n-1] = d[n-2];
+  for (let i=1;i<n-1;i++){
+    if (d[i-1]*d[i] <= 0){ m[i] = 0; continue; }
+    const w1 = 2*h[i]+h[i-1], w2 = h[i]+2*h[i-1];
+    m[i] = (w1+w2)/(w1/d[i-1]+w2/d[i]);   // ≤ 3·min(d): the Fritsch–Carlson monotonicity bound
+  }
+  return x => {
+    if (x <= xs[0]) return ys[0];
+    if (x >= xs[n-1]) return ys[n-1];
+    let i = 0; while (i < n-2 && x >= xs[i+1]) i++;
+    const t = (x-xs[i])/h[i], t2 = t*t, t3 = t2*t;
+    return (2*t3-3*t2+1)*ys[i] + (t3-2*t2+t)*h[i]*m[i] + (3*t2-2*t3)*ys[i+1] + (t3-t2)*h[i]*m[i+1];
+  };
+}
+/* Photoshop Soft Light, a = base, b = blend (Wikipedia «Blend modes», the Photoshop row). Not pegtop ((1−2b)a²+2ba) and not W3C,
+   whose b > 0.5 branch uses ((16a−12)a+4)a instead of √a for a ≤ 0.25. b = 0.5 gives a; a = 0 and a = 1 never move. */
+const softLight = (a,b) => b < 0.5 ? 2*a*b + a*a*(1-2*b) : 2*a*(1-b) + Math.sqrt(a)*(2*b-1);
+function chanTable(pts, soft){
+  const g = pchip(pts), T = new Float64Array(CT+1);
+  for (let k=0;k<=CT;k++){ const x = k/CT; T[k] = soft ? softLight(x, g(x)) : g(x); }
+  return T;
+}
+function ev(T, x){
+  if (x <= 0) return T[0]+x;
+  if (x >= 1) return T[CT]+(x-1);
+  const k = x*CT, i = k|0; return T[i]+(T[i+1]-T[i])*(k-i);
+}
+const isIdent = (pts, soft) => soft ? pts.every(p => p[1]===0.5)
+  : pts[0][0]===0 && pts[pts.length-1][0]===1 && pts.every(p => p[0]===p[1]);
+function chanOk(pts, soft){ const T = chanTable(pts, soft); for (let k=1;k<=CT;k++) if (T[k] < T[k-1]-1e-9) return false; return true; }
+const setAt = (pts,i,x,y) => pts.map((p,k) => k===i ? [x,y] : p);
+/* fold guard: the point goes as close to (x,y) as it can while the channel's result still never falls */
+function curveMove(pts, i, x, y, soft){
+  const n = pts.length;
+  x = Math.max(i>0 ? pts[i-1][0]+XGAP : 0, Math.min(i<n-1 ? pts[i+1][0]-XGAP : 1, x));
+  y = clamp01(y);
+  if (!soft){
+    y = Math.max(i>0 ? pts[i-1][1] : 0, Math.min(i<n-1 ? pts[i+1][1] : 1, y));
+    return setAt(pts, i, x, y);
+  }
+  const q = setAt(pts, i, x, y); if (chanOk(q, true)) return q;
+  const [x0,y0] = pts[i];
+  const path = chanOk(setAt(pts,i,x,y0), true) ? t => [x, y0+(y-y0)*t] : t => [x0+(x-x0)*t, y0+(y-y0)*t];
+  let lo = 0, hi = 1;
+  for (let k=0;k<18;k++){ const t = (lo+hi)/2, [a,b] = path(t); if (chanOk(setAt(pts,i,a,b), true)) lo = t; else hi = t; }
+  const [a,b] = path(lo); return setAt(pts, i, a, b);
+}
+function curveAdd(pts, x, soft){
+  x = clamp01(x);
+  if (pts.length >= 16 || pts.some(p => Math.abs(p[0]-x) < 2*XGAP)) return null;
+  const q = pts.concat([[x, pchip(pts)(x)]]).sort((a,b) => a[0]-b[0]);
+  if (soft && !chanOk(q, true)) return null;
+  return { pts:q, i:q.findIndex(p => p[0]===x) };
+}
+function curveDel(pts, i, soft){
+  if (i <= 0 || i >= pts.length-1) return null;
+  const q = pts.filter((_,k) => k!==i);
+  return soft && !chanOk(q, true) ? null : q;
+}
+let CV = { src:null, any:false };
+function prepCurves(){
+  if (CV.src === P.curves) return;
+  const c = P.curves, t = (pts, soft) => isIdent(pts, soft) ? null : chanTable(pts, soft);
+  const lab = [t(c.lab.L), t(c.lab.a), t(c.lab.b)], rgb = [t(c.lrgb.R), t(c.lrgb.G), t(c.lrgb.B)];
+  CV = { src:c, lab: lab.some(Boolean) ? lab : null, lL: t(c.lrgb.L), rgb: rgb.some(Boolean) ? rgb : null, soft: t(c.soft.L, true) };
+  CV.any = !!(CV.lab || CV.lL || CV.rgb || CV.soft);
+}
+const D50toD65 = inv3(D65toD50), X2S = inv3(S2X);
+const fLabInv = t => t > 6/29 ? t*t*t : (116*t-16)*27/24389;
+function labD50Inv(L,a,b){ const fy = (L+16)/116; return mul(X2S, mul(D50toD65, [0.96422*fLabInv(fy+a/500), fLabInv(fy), 0.82521*fLabInv(fy-b/200)])); }
+/* OkLab in → OkLab out; pr (optional) receives each channel's input, 0..1, for the histogram and the on-image picker */
+function curveStages(L,a,b,space,pr){
+  if (CV.lab || pr){
+    const [cl,ca,cb] = labD50(oklabToLin(L,a,b));
+    if (pr) pr.lab = [cl/100, (ca+128)/256, (cb+128)/256];
+    if (CV.lab){
+      const T = CV.lab;
+      const o = labD50Inv(T[0] ? 100*ev(T[0], cl/100) : cl, T[1] ? 256*ev(T[1], (ca+128)/256)-128 : ca, T[2] ? 256*ev(T[2], (cb+128)/256)-128 : cb);
+      [L,a,b] = linToOklab(o[0],o[1],o[2]);
+    }
+  }
+  if (pr) pr.lL = L;
+  if (CV.lL) L = ev(CV.lL, L);
+  if (CV.rgb || pr){
+    let v = oklabToLin(L,a,b); if (space==="p3") v = mul(StoP3, v);
+    const e = v.map(toEnc);
+    if (pr) pr.rgb = e;
+    if (CV.rgb){
+      v = e.map((x,c) => toLin(CV.rgb[c] ? ev(CV.rgb[c], x) : x));
+      if (space==="p3") v = mul(P3toS, v);
+      [L,a,b] = linToOklab(v[0],v[1],v[2]);
+    }
+  }
+  if (pr) pr.soft = L;
+  if (CV.soft) L = ev(CV.soft, L);
+  return [L,a,b];
+}
 function buildLUT(N, space){
   prepAll();
   const lut = new Float32Array(N*N*N*3); let k = 0; const n1 = N-1;
@@ -894,6 +1036,7 @@ function render(){
   updateNormReadout();
   updateMeasure();
   drawWheel();
+  if (!cvPanel.classList.contains("collapsed")){ curveHist(); drawCurve(); }
 }
 /* ---------- normalisation readouts (Lab D50, as in Photoshop) ---------- */
 const f1 = v => (v<0?"−":"")+Math.abs(v).toFixed(1);
@@ -1057,6 +1200,7 @@ function syncUI(){
   press("spS",P.space==="srgb"); press("spP",P.space==="p3");
   press("n33",P.size===33); press("n65",P.size===65);
   geometry();
+  syncCurveUI();
 }
 for (const [sid,,key] of sliders){
   $(sid).addEventListener("input", e => { P[key] = Number(e.target.value); syncUI(); schedule(); });
@@ -1112,7 +1256,7 @@ on("align", () => {
 });
 
 imgCv.addEventListener("click", e => {
-  if (!srcData) return;
+  if (!srcData || curveFrameOn()) return;
   if (dragMoved){ dragMoved = false; return; }
   const r = imgCv.getBoundingClientRect();
   const x = Math.floor((e.clientX-r.left)/r.width*imgCv.width), y = Math.floor((e.clientY-r.top)/r.height*imgCv.height);
@@ -1154,6 +1298,7 @@ function cubeText(N, space){
     "# neutral="+P.neutral+" pins="+(P.skinLock?PINS.map(p=>p.type+"@"+Math.round(p.h)).join(","):"off")+" pinStr="+P.skinStr+" input="+(space==="p3"?"Display P3":"sRGB"),
     "# normalisation: neutralMarkers="+markers.filter(m=>m.type==="neutral").length+" wb="+P.wb+" skinChroma="+P.skinCf+" skinHue="+P.skinDh+" (LUT includes normalisation for this frame)",
     "LUT_3D_SIZE "+N, "DOMAIN_MIN 0 0 0", "DOMAIN_MAX 1 1 1"];
+  if (CV.any) head.splice(4, 0, "# curves: "+curveSummary());
   const lines = new Array(N*N*N);
   for (let i=0,k=0;i<lines.length;i++,k+=3) lines[i] = lut[k].toFixed(6)+" "+lut[k+1].toFixed(6)+" "+lut[k+2].toFixed(6);
   return head.join("\n")+"\n"+lines.join("\n")+"\n";
@@ -1266,7 +1411,7 @@ $("zFit").addEventListener("click", () => { zoom = 1; applyZoom(true); box.scrol
 $("zOne").addEventListener("click", () => setZoom(1/fitDisp()));
 let drag = null;
 imgCv.addEventListener("pointerdown", e => {
-  if (e.pointerType === "touch" || e.button !== 0 || zoom <= 1) return;
+  if (curveFrameOn() || e.pointerType === "touch" || e.button !== 0 || zoom <= 1) return;
   drag = { x:e.clientX, y:e.clientY, sl:box.scrollLeft, st:box.scrollTop, moved:false };
   imgCv.setPointerCapture(e.pointerId);
 });
@@ -1281,6 +1426,194 @@ function endPan(){ if (drag && drag.moved){ dragMoved = true; setTimeout(() => {
 imgCv.addEventListener("pointerup", endPan);
 imgCv.addEventListener("pointercancel", endPan);
 new ResizeObserver(() => applyZoom(false)).observe(box);
+
+/* ---------- curve panel: graph, channels, on-image picker ---------- */
+const cvPanel = $("curvePanel"), cvCv = $("cvCv"), cvCtx = cvCv.getContext("2d");
+const CV_S = 276, CV_L = 16, CV_T = 4, CV_W = 256;   // canvas, left strip, top pad, plot side (CSS px)
+const CV_CH = { lrgb:["L","R","G","B"], lab:["L","a","b"], soft:["L"] };
+const CV_CH_TIP = { L:"Светлота", R:"Красный канал", G:"Зелёный канал", B:"Синий канал", a:"a: зелёный ↔ пурпурный", b:"b: синий ↔ жёлтый" };
+const CUI = { tab:"lrgb", ch:{ lrgb:"L", lab:"L", soft:"L" }, mode:"graph", sel:-1, hover:null, drag:null, fdrag:null };
+let cvHist = null;
+const curPts = () => P.curves[CUI.tab][CUI.ch[CUI.tab]];
+const cvSoft = () => CUI.tab === "soft";
+function setPts(pts){
+  const tab = CUI.tab, ch = CUI.ch[tab], old = P.curves[tab][ch];
+  if (pts.length===old.length && pts.every((p,i) => p[0]===old[i][0] && p[1]===old[i][1])) return;
+  P.curves = Object.freeze({ ...P.curves, [tab]: Object.freeze({ ...P.curves[tab], [ch]: pts }) });
+}
+function unitOf(tab, ch){ return tab==="lab" ? (ch==="L" ? { k:100, o:0, min:0, max:100 } : { k:256, o:-128, min:-128, max:127 }) : { k:255, o:0, min:0, max:255 }; }
+const fmtU = (v, u) => String(Math.round(Math.max(u.min, Math.min(u.max, v*u.k+u.o))));
+function curveSummary(){
+  const out = [];
+  for (const tab of ["lrgb","lab","soft"]) for (const ch of CV_CH[tab]){
+    const pts = P.curves[tab][ch];
+    if (!isIdent(pts, tab==="soft")) out.push(tab+"."+ch+"="+pts.map(p => p[0].toFixed(3)+","+p[1].toFixed(3)).join(";"));
+  }
+  return out.join(" ");
+}
+function curveProbe(r,g,b){ const [L,C,h] = xfPre(r,g,b,"srgb"), pr = {}; curveStages(L, C*Math.cos(h*D2R), C*Math.sin(h*D2R), "srgb", pr); return pr; }
+function chanIn(pr, tab, ch){ return tab==="soft" ? pr.soft : tab==="lab" ? pr.lab["Lab".indexOf(ch)] : ch==="L" ? pr.lL : pr.rgb["RGB".indexOf(ch)]; }
+function curveHist(){
+  if (!srcData || !samples.length){ cvHist = null; return; }
+  const d = srcData.data, bins = new Float64Array(128), tab = CUI.tab, ch = CUI.ch[tab];
+  for (const s of samples){
+    const v = chanIn(curveProbe(d[s.p]/255, d[s.p+1]/255, d[s.p+2]/255), tab, ch);
+    if (v >= 0 && v <= 1) bins[Math.min(127, Math.floor(v*128))]++;
+  }
+  cvHist = bins;
+}
+function labHex(L,a,b){ return "#"+labD50Inv(L,a,b).map(v => Math.round(toEnc(clamp01(v))*255).toString(16).padStart(2,"0")).join(""); }
+function stripStops(tab, ch){
+  if (tab==="lab" && ch==="a") return [labHex(60,-90,0), labHex(60,0,0), labHex(60,90,0)];
+  if (tab==="lab" && ch==="b") return [labHex(60,0,-90), labHex(60,0,0), labHex(80,0,90)];
+  if (tab==="lrgb" && ch!=="L") return ["#000000", { R:"#ff0000", G:"#00ff00", B:"#0000ff" }[ch]];
+  return ["#000000", "#ffffff"];
+}
+const cvPx = (x,y) => [CV_L + x*CV_W, CV_T + (1-y)*CV_W];
+function drawCurve(){
+  const dpr = window.devicePixelRatio || 1;
+  if (cvCv.width !== Math.round(CV_S*dpr)){ cvCv.width = cvCv.height = Math.round(CV_S*dpr); }
+  const c = cvCtx; c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,CV_S,CV_S);
+  const fg = tok("--fg"), muted = tok("--muted"), line = tok("--line");
+  const tab = CUI.tab, ch = CUI.ch[tab], soft = tab==="soft", pts = curPts(), g = pchip(pts);
+  c.fillStyle = tok("--well"); c.beginPath(); c.roundRect(CV_L, CV_T, CV_W, CV_W, 8); c.fill();
+  if (cvHist){
+    const mx = Math.max(...cvHist) || 1; c.fillStyle = tok("--rail");
+    for (let k=0;k<128;k++){ const hh = cvHist[k]/mx*CV_W*0.92; if (hh>0) c.fillRect(CV_L+k*CV_W/128, CV_T+CV_W-hh, CV_W/128+0.4, hh); }
+  }
+  c.strokeStyle = line; c.lineWidth = 1; c.beginPath();
+  for (let q=1;q<4;q++){ const t = q*CV_W/4; c.moveTo(CV_L+t, CV_T); c.lineTo(CV_L+t, CV_T+CV_W); c.moveTo(CV_L, CV_T+t); c.lineTo(CV_L+CV_W, CV_T+t); }
+  c.stroke();
+  c.save(); c.beginPath(); c.rect(CV_L, CV_T, CV_W, CV_W); c.clip();
+  c.setLineDash([3,4]); c.strokeStyle = muted; c.beginPath();
+  if (soft){ c.moveTo(...cvPx(0,0.5)); c.lineTo(...cvPx(1,0.5)); } else { c.moveTo(...cvPx(0,0)); c.lineTo(...cvPx(1,1)); }
+  c.stroke();
+  if (soft){ // what the grey layer does to lightness
+    c.setLineDash([6,3]); c.lineWidth = 1.5; c.beginPath();
+    for (let k=0;k<=CV_W;k++){ const x = k/CV_W, p = cvPx(x, softLight(x, g(x))); k ? c.lineTo(...p) : c.moveTo(...p); }
+    c.stroke();
+  }
+  c.setLineDash([]); c.strokeStyle = fg; c.lineWidth = 2; c.beginPath();
+  for (let k=0;k<=CV_W;k++){ const p = cvPx(k/CV_W, g(k/CV_W)); k ? c.lineTo(...p) : c.moveTo(...p); }
+  c.stroke();
+  if (CUI.hover !== null){
+    const x = clamp01(CUI.hover), [px,py] = cvPx(x, g(x));
+    c.setLineDash([2,3]); c.lineWidth = 1; c.beginPath(); c.moveTo(px, CV_T); c.lineTo(px, CV_T+CV_W); c.stroke(); c.setLineDash([]);
+    c.beginPath(); c.arc(px, py, 5, 0, Math.PI*2); c.lineWidth = 1.5; c.stroke();
+  }
+  c.restore();
+  pts.forEach((p,i) => {
+    const [px,py] = cvPx(p[0], p[1]);
+    c.fillStyle = i===CUI.sel ? fg : tok("--well"); c.strokeStyle = fg; c.lineWidth = 1.5;
+    c.fillRect(px-4, py-4, 8, 8); c.strokeRect(px-4, py-4, 8, 8);
+  });
+  const sIn = stripStops(soft ? "lrgb" : tab, soft ? "L" : ch), sOut = soft ? ["#000000","#ffffff"] : sIn;
+  const gx = c.createLinearGradient(CV_L, 0, CV_L+CV_W, 0); sIn.forEach((s,i) => gx.addColorStop(i/(sIn.length-1), s));
+  c.fillStyle = gx; c.fillRect(CV_L, CV_T+CV_W+5, CV_W, 7);
+  const gy = c.createLinearGradient(0, CV_T+CV_W, 0, CV_T); sOut.forEach((s,i) => gy.addColorStop(i/(sOut.length-1), s));
+  c.fillStyle = gy; c.fillRect(4, CV_T, 7, CV_W);
+}
+const curveFrameOn = () => CUI.mode === "frame" && !!srcData && !cvPanel.classList.contains("collapsed");
+function syncCurveUI(){
+  const tab = CUI.tab, ch = CUI.ch[tab], soft = tab==="soft", pts = curPts(), u = unitOf(tab, ch);
+  for (const b of $("cvTabs").children) b.setAttribute("aria-pressed", String(b.dataset.tab===tab));
+  const box = $("cvChans");
+  if (box.dataset.tab !== tab){
+    box.dataset.tab = tab;
+    box.innerHTML = CV_CH[tab].map(k => "<button type='button' data-ch='"+k+"' title='"+CV_CH_TIP[k]+"'>"+k+"</button>").join("");
+  }
+  box.hidden = soft;
+  for (const b of box.children){ b.setAttribute("aria-pressed", String(b.dataset.ch===ch)); b.classList.toggle("mod", !isIdent(P.curves[tab][b.dataset.ch], soft)); }
+  for (const b of $("cvTabs").children) b.classList.toggle("mod", CV_CH[b.dataset.tab].some(k => !isIdent(P.curves[b.dataset.tab][k], b.dataset.tab==="soft")));
+  $("cvModeGraph").setAttribute("aria-pressed", String(CUI.mode==="graph")); $("cvModeFrame").setAttribute("aria-pressed", String(CUI.mode==="frame"));
+  if (CUI.sel >= pts.length) CUI.sel = -1;
+  $("cvInL").firstChild.textContent = soft ? "Светлота " : "Вход "; $("cvOutL").firstChild.textContent = soft ? "Слой " : "Выход ";
+  const has = CUI.sel >= 0;
+  for (const [id,k] of [["cvIn",0],["cvOut",1]]){
+    const el = $(id); el.disabled = !has; el.min = u.min; el.max = u.max;
+    if (document.activeElement !== el) el.value = has ? fmtU(pts[CUI.sel][k], u) : "";
+  }
+  $("cvAxis").textContent = tab==="lab" && ch==="a" ? "Ось a: ← зелёный · пурпурный →, 0 в середине."
+    : tab==="lab" && ch==="b" ? "Ось b: ← синий · жёлтый →, 0 в середине."
+    : soft ? "Сплошная — серый слой (128 = без изменений), пунктир — что стало со светлотой."
+    : tab==="lab" ? "L по CIELab D50, 0–100." : ch==="L" ? "L — светлота OkLab в шкале 0–255; цвет не сдвигается." : "Канал "+ch+" в шкале 0–255.";
+  if (CUI.hover === null) $("cvHover").innerHTML = "<span>"+(CUI.mode==="frame" ? "Наведите на снимок." : "Точек: "+pts.length+".")+"</span>";
+  else {
+    const g = pchip(pts), x = CUI.hover;
+    $("cvHover").innerHTML = soft ? "<span>Под курсором:</span> светлота "+fmtU(x,u)+" · слой "+fmtU(g(clamp01(x)),u)+" → "+fmtU(softLight(clamp01(x), g(clamp01(x))),u)
+      : "<span>Под курсором:</span> "+fmtU(x,u)+" → "+fmtU(g(x),u);
+  }
+  $("cvNote").textContent = CUI.mode==="frame"
+    ? "По кадру: наведите на участок снимка и тяните вверх — светлее, вниз — темнее; точка встаёт на значение под курсором. Пока включено, щелчок по снимку не ставит маркеры."
+    : "Щелчок по графику — точка, тянуть — двигать, двойной щелчок или Delete — удалить. Кривая не даёт точке зайти туда, где тон пошёл бы вспять.";
+  imgCv.classList.toggle("curvepick", curveFrameOn());
+  drawCurve();
+}
+$("cvTabs").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; CUI.tab = b.dataset.tab; CUI.sel = -1; syncUI(); schedule(); });
+$("cvChans").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; CUI.ch[CUI.tab] = b.dataset.ch; CUI.sel = -1; syncUI(); schedule(); });
+on("cvModeGraph", () => { CUI.mode = "graph"; CUI.hover = null; });
+on("cvModeFrame", () => { CUI.mode = "frame"; setStatus("Кривая по кадру: наведите на участок и тяните вверх или вниз."); });
+on("cvReset", () => {
+  const tab = CUI.tab, d = DEFAULTS.curves[tab];
+  P.curves = Object.freeze({ ...P.curves, [tab]: d }); CUI.sel = -1;
+});
+new MutationObserver(() => { syncCurveUI(); schedule(); }).observe(cvPanel, { attributes:true, attributeFilter:["class"] });
+// graph
+function cvPos(e){ const r = cvCv.getBoundingClientRect(), s = CV_S/r.width; return [((e.clientX-r.left)*s-CV_L)/CV_W, 1-((e.clientY-r.top)*s-CV_T)/CV_W]; }
+function cvHit(x,y){ let best = -1, bd = 9/CV_W; curPts().forEach((p,i) => { const d = Math.hypot(p[0]-x, p[1]-y); if (d < bd){ bd = d; best = i; } }); return best; }
+cvCv.addEventListener("pointerdown", e => {
+  if (e.button !== 0) return;
+  e.preventDefault();   // no text selection while dragging a point
+  const [x,y] = cvPos(e); let i = cvHit(x,y);
+  if (i < 0){ const a = curveAdd(curPts(), x, cvSoft()); if (!a) return; setPts(a.pts); i = a.i; setPts(curveMove(curPts(), i, x, y, cvSoft())); }
+  CUI.sel = i; CUI.drag = { i }; cvCv.setPointerCapture(e.pointerId); cvCv.focus();
+  syncCurveUI(); schedule();
+});
+cvCv.addEventListener("pointermove", e => {
+  if (!CUI.drag) return;
+  const [x,y] = cvPos(e); setPts(curveMove(curPts(), CUI.drag.i, x, y, cvSoft())); syncCurveUI(); schedule();
+});
+const cvEnd = () => { if (!CUI.drag) return; CUI.drag = null; commit(); syncUI(); };
+cvCv.addEventListener("pointerup", cvEnd); cvCv.addEventListener("pointercancel", cvEnd);
+function cvDelete(i){ const q = curveDel(curPts(), i, cvSoft()); if (!q) return; setPts(q); CUI.sel = -1; commit(); syncUI(); schedule(); }
+cvCv.addEventListener("dblclick", e => { const [x,y] = cvPos(e); cvDelete(cvHit(x,y)); });
+cvCv.addEventListener("keydown", e => { if ((e.key === "Delete" || e.key === "Backspace") && CUI.sel >= 0){ e.preventDefault(); cvDelete(CUI.sel); } });
+for (const [id,k] of [["cvIn",0],["cvOut",1]]) $(id).addEventListener("change", e => {
+  const pts = curPts(), i = CUI.sel; if (i < 0 || i >= pts.length) return;
+  const u = unitOf(CUI.tab, CUI.ch[CUI.tab]), v = (Number(e.target.value)-u.o)/u.k; if (!isFinite(v)) return;
+  setPts(curveMove(pts, i, k===0 ? v : pts[i][0], k===1 ? v : pts[i][1], cvSoft())); syncUI(); commit(); schedule();
+});
+// on-image picker: the value under the cursor in the current channel, press and drag up/down to bend the curve there
+function pixelInput(e){
+  const r = imgCv.getBoundingClientRect();
+  const x = Math.floor((e.clientX-r.left)/r.width*imgCv.width), y = Math.floor((e.clientY-r.top)/r.height*imgCv.height);
+  const d = srcData.data; let R=0, Gc=0, B=0, n=0;
+  for (let yy=y-1; yy<=y+1; yy++) for (let xx=x-1; xx<=x+1; xx++){
+    if (xx<0 || yy<0 || xx>=imgCv.width || yy>=imgCv.height) continue;
+    const p = (yy*imgCv.width+xx)*4; R+=d[p]; Gc+=d[p+1]; B+=d[p+2]; n++;
+  }
+  return n ? chanIn(curveProbe(R/n/255, Gc/n/255, B/n/255), CUI.tab, CUI.ch[CUI.tab]) : null;
+}
+imgCv.addEventListener("pointerdown", e => {
+  if (!curveFrameOn() || e.button !== 0) return;
+  const v = pixelInput(e); if (v === null) return;
+  e.preventDefault();
+  const x = clamp01(v); let i = curPts().findIndex(p => Math.abs(p[0]-x) < 3*XGAP);
+  if (i < 0){ const a = curveAdd(curPts(), x, cvSoft()); if (!a) return; setPts(a.pts); i = a.i; }
+  CUI.sel = i; CUI.hover = v; CUI.fdrag = { i, y0:curPts()[i][1], sy:e.clientY };
+  imgCv.setPointerCapture(e.pointerId); syncCurveUI();
+});
+imgCv.addEventListener("pointermove", e => {
+  if (CUI.fdrag){
+    const f = CUI.fdrag, pts = curPts();
+    setPts(curveMove(pts, f.i, pts[f.i][0], f.y0+(f.sy-e.clientY)/250, cvSoft())); syncCurveUI(); schedule(); return;
+  }
+  if (!curveFrameOn()){ if (CUI.hover !== null){ CUI.hover = null; syncCurveUI(); } return; }
+  CUI.hover = pixelInput(e); syncCurveUI();
+});
+const fEnd = () => { if (!CUI.fdrag) return; CUI.fdrag = null; commit(); syncUI(); schedule(); };
+imgCv.addEventListener("pointerup", fEnd); imgCv.addEventListener("pointercancel", fEnd);
+imgCv.addEventListener("pointerleave", () => { if (!CUI.fdrag && CUI.hover !== null){ CUI.hover = null; syncCurveUI(); } });
 
 /* ---------- foldable panels ---------- */
 const FOLD_KEY = "harmony.folds";
