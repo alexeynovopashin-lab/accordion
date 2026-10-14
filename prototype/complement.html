@@ -56,6 +56,7 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stro
 @media (min-width:980px){.main{grid-template-columns:minmax(0,1fr) 384px}}
 .left{display:grid;gap:14px;align-content:start;min-width:0}
 .side{display:grid;gap:12px;align-content:start;min-width:0}
+.tools{display:grid;gap:12px;align-content:start;min-width:0}
 
 /* photo stage: mid-grey achromatic surround (Kosenko ch.15: the surround shifts perceived saturation) */
 .stage{background:var(--stage);border-radius:22px;corner-shape:squircle;display:flex;flex-direction:column;min-width:0;
@@ -196,6 +197,23 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
 .seg button.mod::after{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;margin-left:5px;vertical-align:middle}
 .cvrow .btn{margin-left:auto}
 .cvrow input:disabled{opacity:.4}
+/* desktop shell (>=980px): the page never scrolls. Left column = tool strip over the photo (the photo only zooms and pans, "fit" is
+   measured on the box itself); right column = one full-height plate whose tool plates scroll on their own. Below 980px: phone layout above. */
+@media (min-width:980px){
+  html,body{height:100%}
+  html{overflow:hidden}
+  body{overflow:clip}   /* clip, not hidden: nothing can scroll it programmatically (focus, scrollIntoView) */
+  .wrap{max-width:none;height:100vh;height:100dvh;padding-bottom:16px;grid-template-rows:auto minmax(0,1fr)}
+  .main{grid-template-columns:minmax(0,1fr) 404px;min-height:0;align-items:stretch}
+  .left{min-height:0;grid-template-rows:minmax(0,1fr)}
+  .stage{min-height:0}
+  .canvas-box{flex:1 1 0;min-height:0;max-height:none}
+  #img,#img.zoomed{max-width:none;max-height:none}
+  .side{display:flex;flex-direction:column;gap:0;min-height:0;padding:10px 6px 10px 10px;background:var(--well);border-radius:22px;corner-shape:squircle;
+    box-shadow:0 10px 30px var(--cast),inset 0 0 0 1px var(--hair)}
+  .sidehead{padding:0 8px 8px 6px}
+  .tools{flex:1 1 0;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 4px 0 0;scrollbar-width:thin;scrollbar-color:var(--rail-on) transparent}
+}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 
@@ -243,14 +261,6 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
       <div class="canvas-box"><canvas id="img" aria-label="Снимок; щелчок задаёт ноту или ставит маркер"></canvas></div>
       <div class="status" id="status" aria-live="polite"></div>
     </section>
-    <section class="panel measures" aria-label="Замеры">
-      <h2 title="Lab D50 по облакам маркеров: исходно → после нормализации → итог с аккордом">Замеры по маркерам</h2>
-      <div class="tablebox"><table class="mtable">
-        <thead><tr><th>Облако</th><th>Исходно</th><th>После нормализации</th><th>Итог с аккордом</th></tr></thead>
-        <tbody id="mBody"><tr><td colspan="4" class="dim">Нет маркеров.</td></tr></tbody>
-      </table></div>
-      <p class="note">Lab D50, как в Photoshop: медианы по облаку маркера. Для кожи — её светлая четверть (те же пиксели во всех трёх столбцах). Нейтрали и «цвет» — по каждому маркеру отдельно.</p>
-    </section>
     </div>
 
     <aside class="side" aria-label="Инструменты">
@@ -258,6 +268,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
         <button class="btn icon" id="foldAll" type="button" title="Свернуть все" aria-label="Свернуть все"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5-5 5 5M7 19l5-5 5 5"/></svg></button>
         <button class="btn icon" id="unfoldAll" type="button" title="Развернуть все" aria-label="Развернуть все"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 5 5 5 5-5M7 14l5 5 5-5"/></svg></button>
       </div>
+      <div class="tools">
       <section class="panel" aria-label="Свет и кожа">
         <h2 title="Нормализация кадра: свет по нейтралям, кожа — тон и насыщенность отдельно">1 · Свет и кожа</h2>
         <div class="chips" id="chips"></div>
@@ -295,45 +306,6 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
         </div>
         <p class="note">Доля кадра почти без цвета и её оттенок. Закрашенная точка: уровень есть и чист (отклонение меньше 2.5).</p>
       </section>
-
-      <section class="panel" aria-label="Круг">
-        <h2>Круг · основная нота</h2>
-        <canvas id="wheel" aria-label="Цветовой круг OkLab: щелчок или перетаскивание задаёт основную ноту"></canvas>
-        <p class="legend">Точки — цвета снимка. Сплошной контур — предел sRGB, пунктир — Display P3. Секторы — закреплённые облака маркеров (пунктирный сектор — зона кожи по вашей таблице обложек, пока нет маркера кожи). Перетаскивайте по кругу, чтобы задать основную ноту.</p>
-        <div class="readout">
-          <div class="cell"><span>Кожа</span><b id="rSkin">—</b></div>
-          <div class="cell"><span>Ось напротив кожи</span><b id="rAxis">—</b></div>
-          <div class="cell"><span>Масса напротив: до → после</span><b id="rMass">—</b></div>
-          <div class="cell"><span>Интервал кожа ↔ масса</span><b id="rInt">—</b></div>
-        </div>
-        <div class="verdict"><span class="dot" id="vDot"></span><span id="vText">—</span></div>
-        <div class="btns">
-          <button class="btn primary" id="align" type="button">Свести с кожей</button>
-          <button class="btn" id="reset" type="button">Сбросить движения</button>
-        </div>
-      </section>
-
-      <section class="panel" aria-label="Аккорд">
-        <h2>Аккорд</h2>
-        <div class="seg" role="group" aria-label="Схема">
-          <button id="mPair" type="button" aria-pressed="true" title="Основная нота и противоположная ей">Пара</button>
-          <button id="mSplit" type="button" aria-pressed="false" title="Основная нота и две соседние с противоположной">Расщеплённая</button>
-          <button id="mTriad" type="button" aria-pressed="false" title="Три ноты через 120°">Триада</button>
-        </div>
-        <div class="slider"><label for="sBase">Основная нота</label><output id="oBase"></output><input id="sBase" type="range" min="0" max="359" step="1"></div>
-      </section>
-
-      <section class="panel" aria-label="Движение">
-        <h2>Движение</h2>
-        <div class="slider"><label for="sRotAll">Поворот всего аккорда</label><output id="oRotAll"></output><input id="sRotAll" type="range" min="-60" max="60" step="1"></div>
-        <div class="slider"><label for="sRotOpp">Сдвиг противоположной ноты</label><output id="oRotOpp"></output><input id="sRotOpp" type="range" min="-60" max="60" step="1"></div>
-        <div class="slider"><label for="sSpread">Раскрытие вокруг оси</label><output id="oSpread"></output><input id="sSpread" type="range" min="-30" max="30" step="1"></div>
-        <div class="grid2">
-          <div class="slider"><label for="sCore" title="Ядро зоны: в этих пределах оттенки поворачиваются полностью">Ширина зоны</label><output id="oCore"></output><input id="sCore" type="range" min="6" max="40" step="1"></div>
-          <div class="slider"><label for="sFall" title="Затухание: на сколько градусов за ядром поворот сходит на нет">Мягкость края</label><output id="oFall"></output><input id="sFall" type="range" min="10" max="60" step="1"></div>
-        </div>
-      </section>
-
       <section class="panel" aria-label="Кривая" id="curvePanel">
         <h2 title="Кривые идут после света, кожи, аккорда и закреплений, до сжатия в охват. Входят в LUT и снимок.">Кривая</h2>
         <div class="seg" role="group" aria-label="Вкладка кривой" id="cvTabs">
@@ -356,7 +328,41 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
         <div class="kv" id="cvHover"><span>—</span></div>
         <p class="note" id="cvNote"></p>
       </section>
-
+      <section class="panel" aria-label="Круг">
+        <h2>Круг · основная нота</h2>
+        <canvas id="wheel" aria-label="Цветовой круг OkLab: щелчок или перетаскивание задаёт основную ноту"></canvas>
+        <p class="legend">Точки — цвета снимка. Сплошной контур — предел sRGB, пунктир — Display P3. Секторы — закреплённые облака маркеров (пунктирный сектор — зона кожи по вашей таблице обложек, пока нет маркера кожи). Перетаскивайте по кругу, чтобы задать основную ноту.</p>
+        <div class="readout">
+          <div class="cell"><span>Кожа</span><b id="rSkin">—</b></div>
+          <div class="cell"><span>Ось напротив кожи</span><b id="rAxis">—</b></div>
+          <div class="cell"><span>Масса напротив: до → после</span><b id="rMass">—</b></div>
+          <div class="cell"><span>Интервал кожа ↔ масса</span><b id="rInt">—</b></div>
+        </div>
+        <div class="verdict"><span class="dot" id="vDot"></span><span id="vText">—</span></div>
+        <div class="btns">
+          <button class="btn primary" id="align" type="button">Свести с кожей</button>
+          <button class="btn" id="reset" type="button">Сбросить движения</button>
+        </div>
+      </section>
+      <section class="panel" aria-label="Аккорд">
+        <h2>Аккорд</h2>
+        <div class="seg" role="group" aria-label="Схема">
+          <button id="mPair" type="button" aria-pressed="true" title="Основная нота и противоположная ей">Пара</button>
+          <button id="mSplit" type="button" aria-pressed="false" title="Основная нота и две соседние с противоположной">Расщеплённая</button>
+          <button id="mTriad" type="button" aria-pressed="false" title="Три ноты через 120°">Триада</button>
+        </div>
+        <div class="slider"><label for="sBase">Основная нота</label><output id="oBase"></output><input id="sBase" type="range" min="0" max="359" step="1"></div>
+      </section>
+      <section class="panel" aria-label="Движение" data-closed>
+        <h2>Движение</h2>
+        <div class="slider"><label for="sRotAll">Поворот всего аккорда</label><output id="oRotAll"></output><input id="sRotAll" type="range" min="-60" max="60" step="1"></div>
+        <div class="slider"><label for="sRotOpp">Сдвиг противоположной ноты</label><output id="oRotOpp"></output><input id="sRotOpp" type="range" min="-60" max="60" step="1"></div>
+        <div class="slider"><label for="sSpread">Раскрытие вокруг оси</label><output id="oSpread"></output><input id="sSpread" type="range" min="-30" max="30" step="1"></div>
+        <div class="grid2">
+          <div class="slider"><label for="sCore" title="Ядро зоны: в этих пределах оттенки поворачиваются полностью">Ширина зоны</label><output id="oCore"></output><input id="sCore" type="range" min="6" max="40" step="1"></div>
+          <div class="slider"><label for="sFall" title="Затухание: на сколько градусов за ядром поворот сходит на нет">Мягкость края</label><output id="oFall"></output><input id="sFall" type="range" min="10" max="60" step="1"></div>
+        </div>
+      </section>
       <section class="panel" aria-label="Что держать" data-closed>
         <h2 title="Закрепления: нейтрали и цвета маркеров не поворачиваются вместе с аккордом">Что держать на месте</h2>
         <div class="slider"><label for="sNeutral" title="Нейтрали: порог насыщенности (OkLab C). Всё, что бледнее, считается серым и не поворачивается">Что считать серым</label><output id="oNeutral"></output><input id="sNeutral" type="range" min="0" max="0.06" step="0.002"></div>
@@ -365,7 +371,14 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
         <div class="kv" id="pinInfo"><span>—</span></div>
         <p class="note">Без маркера кожи действует зона кожи по вашей таблице обложек (48° OkLCh ±8°). Строки выше: на сколько аккорд сдвигает цвет маркера и сколько из этого сдвига закрепление гасит.</p>
       </section>
-
+    <section class="panel measures" aria-label="Замеры" data-closed>
+      <h2 title="Lab D50 по облакам маркеров: исходно → после нормализации → итог с аккордом">Замеры по маркерам</h2>
+      <div class="tablebox"><table class="mtable">
+        <thead><tr><th>Облако</th><th>Исходно</th><th>После нормализации</th><th>Итог с аккордом</th></tr></thead>
+        <tbody id="mBody"><tr><td colspan="4" class="dim">Нет маркеров.</td></tr></tbody>
+      </table></div>
+      <p class="note">Lab D50, как в Photoshop: медианы по облаку маркера. Для кожи — её светлая четверть (те же пиксели во всех трёх столбцах). Нейтрали и «цвет» — по каждому маркеру отдельно.</p>
+    </section>
       <section class="panel" aria-label="Сохранить" data-closed>
         <h2 title="Экспорт: LUT .cube в архиве .zip и снимок PNG">Сохранить LUT и снимок</h2>
         <div class="grid2">
@@ -385,11 +398,11 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
         </div>
         <p class="note" id="exportNote">LUT рассчитан на снимок в выбранном пространстве. Для Lightroom его встраивают в творческий профиль через Camera Raw в Photoshop; Resolve и Photoshop открывают .cube напрямую.</p>
       </section>
-
       <section class="panel" aria-label="Как пользоваться" data-closed>
         <h2>Как пользоваться</h2>
         <p class="note">Два шага. Нормализация: маркеры на нейтралях задают свет, маркер кожи — её тон и насыщенность, каждое отдельно. Гармония: основная нота и противоположные ей цвета двигаются вместе по кругу OkLab, а маркеры кожи, губ, неба и листвы держат свои цвета. Пример: ваш тестовый портрет с мишенью, маркеры уже расставлены.</p>
       </section>
+      </div>
     </aside>
   </div>
 </div>
@@ -863,6 +876,7 @@ function renderChips(){
   $("chipsNote").hidden = markers.length>0;
 }
 function drawMarkers(){
+  if (zoom === 1) applyZoom(false);   // dot size scales by fitDisp/dispNow: bring the displayed size up to the settled layout first
   const k = imgCv.width/900 * Math.min(1, fitDisp()/Math.max(dispNow(), 1e-6));
   imgCtx.font = "600 "+Math.round(13*k)+"px "+getComputedStyle(document.body).fontFamily;
   imgCtx.textBaseline = "middle";
@@ -1374,17 +1388,21 @@ $("copyLut").addEventListener("click", async () => {
 /* ---------- zoom / pan ---------- */
 const box = document.querySelector(".canvas-box");
 let zoom = 1, dragMoved = false;
-function boxInner(){ const cs = getComputedStyle(box); return { w: box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), h: Math.min(0.74*window.innerHeight, 900) }; }
+const shell = window.matchMedia("(min-width:980px)");   // desktop shell: the box has a height of its own, "fit" is measured on it
+function boxInner(){ if (shell.matches) return { w: box.offsetWidth, h: box.offsetHeight }; const cs = getComputedStyle(box); return { w: box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight), h: Math.min(0.74*window.innerHeight, 900) }; }
 function fitDisp(){ if (!imgCv.width) return 1; const b = boxInner(); return Math.min(1, b.w/imgCv.width, b.h/imgCv.height) || 1; }
 function dispNow(){ const w = imgCv.getBoundingClientRect().width; return imgCv.width ? w/imgCv.width : 1; }
 let zTimer = 0;
 function applyZoom(redraw){
   if (!imgCv.width) return;
-  if (zoom <= 1.0001){ zoom = 1; imgCv.classList.remove("zoomed","px"); imgCv.style.width = imgCv.style.height = ""; }
+  if (zoom <= 1.0001) zoom = 1;
+  if (zoom === 1 && !shell.matches){ imgCv.classList.remove("zoomed","px"); imgCv.style.width = imgCv.style.height = ""; }
   else {
     const d = fitDisp()*zoom;
-    imgCv.classList.add("zoomed"); imgCv.classList.toggle("px", d > 2);
-    imgCv.style.width = Math.round(imgCv.width*d)+"px"; imgCv.style.height = Math.round(imgCv.height*d)+"px";
+    imgCv.classList.toggle("zoomed", zoom > 1); imgCv.classList.toggle("px", d > 2);
+    // at "fit" round down (never wider than the box, and the on-image markers keep their size: they scale by fitDisp/dispNow)
+    const q = zoom === 1 ? v => Math.floor(v+1e-6) : Math.round;
+    imgCv.style.width = q(imgCv.width*d)+"px"; imgCv.style.height = q(imgCv.height*d)+"px";
   }
   $("zVal").textContent = Math.round(dispNow()*100)+"%";
   if (redraw){ clearTimeout(zTimer); zTimer = setTimeout(() => schedule(), 120); }
@@ -1426,6 +1444,7 @@ function endPan(){ if (drag && drag.moved){ dragMoved = true; setTimeout(() => {
 imgCv.addEventListener("pointerup", endPan);
 imgCv.addEventListener("pointercancel", endPan);
 new ResizeObserver(() => applyZoom(false)).observe(box);
+shell.addEventListener("change", () => applyZoom(false));
 
 /* ---------- curve panel: graph, channels, on-image picker ---------- */
 const cvPanel = $("curvePanel"), cvCv = $("cvCv"), cvCtx = cvCv.getContext("2d");
@@ -1616,7 +1635,7 @@ imgCv.addEventListener("pointerup", fEnd); imgCv.addEventListener("pointercancel
 imgCv.addEventListener("pointerleave", () => { if (!CUI.fdrag && CUI.hover !== null){ CUI.hover = null; syncCurveUI(); } });
 
 /* ---------- foldable panels ---------- */
-const FOLD_KEY = "harmony.folds";
+const FOLD_KEY = "harmony.folds2";   // v2: new default set of open plates (Light+skin, Curve, Circle, Chord)
 let folds = {};
 try { folds = JSON.parse(localStorage.getItem(FOLD_KEY) || "{}") || {}; } catch(e){ folds = {}; }
 const panels = [...document.querySelectorAll(".panel")].filter(p => p.firstElementChild && p.firstElementChild.tagName === "H2");

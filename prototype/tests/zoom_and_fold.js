@@ -32,5 +32,33 @@ const { chromium } = require('playwright');
   console.log('all collapsed', await p.evaluate(()=>[...document.querySelectorAll('.panel')].every(x=>x.classList.contains('collapsed'))));
   await p.click('#unfoldAll'); await p.waitForTimeout(400);
   console.log('wheel size after unfold', await p.$eval('#wheel',e=>e.width));
+  // desktop shell: page does not scroll, tool column scrolls on its own, folding/scrolling tools never moves or rescales the photo
+  let fails = 0; const ok = (name, cond, info) => { console.log((cond ? 'PASS ' : 'FAIL ')+name+(info ? '  '+info : '')); if (!cond) fails++; };
+  const rect = () => p.$eval('#img', e => { const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height].map(v => +v.toFixed(2)); });
+  const pg = () => p.evaluate(() => ({ top:(document.scrollingElement||document.documentElement).scrollTop, bodyTop:document.body.scrollTop,
+    docH:document.documentElement.scrollHeight, winH:innerHeight, tools:document.querySelector('.tools').scrollTop,
+    toolsMax:document.querySelector('.tools').scrollHeight-document.querySelector('.tools').clientHeight, zv:document.getElementById('zVal').textContent }));
+  await p.click('#zFit'); await p.waitForTimeout(300);
+  const r0 = await rect(), g0 = await pg();
+  ok('shell: page does not scroll (scrollTop 0, scrollHeight = window)', g0.top === 0 && g0.bodyTop === 0 && g0.docH === g0.winH, JSON.stringify(g0));
+  ok('shell: tool column is longer than the window (it has something to scroll)', g0.toolsMax > 300, 'toolsMax='+g0.toolsMax);
+  await p.$eval('.tools', e => { e.scrollTop = e.scrollHeight; }); await p.waitForTimeout(150);
+  const r1 = await rect(), g1 = await pg();
+  ok('shell: tools scrolled to the bottom, photo frame unchanged', JSON.stringify(r0) === JSON.stringify(r1) && g1.tools === g1.toolsMax && g1.top === 0 && g1.zv === g0.zv, 'before '+r0+' after '+r1+' tools='+g1.tools+'/'+g1.toolsMax);
+  const side = await p.$eval('.side', e => { const r = e.getBoundingClientRect(); return [r.left+r.width/2, r.top+r.height/2]; });
+  await p.$eval('.tools', e => { e.scrollTop = 0; }); await p.mouse.move(side[0], side[1]); await p.mouse.wheel(0, 700); await p.waitForTimeout(150);
+  const g2 = await pg();
+  ok('shell: wheel over the tool column scrolls the column, not the photo or the page', g2.tools > 0 && g2.top === 0 && JSON.stringify(await rect()) === JSON.stringify(r0) && g2.zv === g0.zv, 'tools='+g2.tools);
+  await p.$eval('.tools', e => { e.scrollTop = 0; });
+  const heads = ['Свет и кожа', 'Кривая', 'Движение', 'Что держать'];
+  for (const h of heads) await p.click(`h2:has-text("${h}")`);
+  await p.waitForTimeout(150);
+  const r2 = await rect(), g3 = await pg();
+  ok('shell: opening/closing plates does not move or rescale the photo', JSON.stringify(r0) === JSON.stringify(r2) && g3.zv === g0.zv, 'after '+r2);
+  for (const h of heads) await p.click(`h2:has-text("${h}")`);
+  await p.setViewportSize({ width:1280, height:760 }); await p.waitForTimeout(400);
+  const rb = await p.$eval('.canvas-box', e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }), ri = await rect();
+  ok('shell: after the window shrinks "fit" shows the whole frame', ri[2] <= rb[0]+0.5 && ri[3] <= rb[1]+0.5 && (Math.abs(ri[2]-rb[0]) < 1.5 || Math.abs(ri[3]-rb[1]) < 1.5), 'box '+rb.map(Math.round)+' img '+ri.slice(2));
   console.log('ERRORS', errs); await b.close();
+  if (fails || errs.length) process.exit(1);
 })();

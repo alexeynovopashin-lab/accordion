@@ -3,6 +3,7 @@
 // (б) 200 random gesture sequences per channel through the fold guard: no channel result ever falls
 // (в) LRGB L and Soft keep OkLab hue within 0.5° on a colour grid
 // (г) Soft Light equals the Photoshop formula at 5 points (numbers written out below)
+// (the curve graph sits in the scrolling tool column of the desktop shell: scrollIntoView before taking its rect)
 // BREAK=1 removes the fold guard from the page: (б) must turn red.
 const { chromium } = require('playwright');
 const crypto = require('crypto'), fs = require('fs');
@@ -20,7 +21,7 @@ async function outputs(b, file, edit){
     await p.click('#skinToTarget'); await p.waitForTimeout(400);
     if (edit === 'curveThenReset'){ // bend a curve in every tab, then reset each tab: must be identity again
       for (const tab of ['lrgb','lab','soft']){ await p.click(`#cvTabs button[data-tab=${tab}]`);
-        const r = await p.$eval('#cvCv', e => { const r = e.getBoundingClientRect(); return [r.left, r.top, r.width]; });
+        const r = await p.$eval('#cvCv', e => { e.scrollIntoView({ block:'center' }); const r = e.getBoundingClientRect(); return [r.left, r.top, r.width]; });
         await p.mouse.move(r[0]+r[2]*0.4, r[1]+r[2]*0.5); await p.mouse.down(); await p.mouse.move(r[0]+r[2]*0.4, r[1]+r[2]*0.3, { steps:4 }); await p.mouse.up();
         await p.click('#cvReset'); }
       await p.waitForTimeout(400);
@@ -50,7 +51,7 @@ async function outputs(b, file, edit){
     await p.click('#foldAll'); await p.click('h2:has-text("Кривая")'); await p.waitForTimeout(300);
     const hash = () => p.$eval('#img', c => { const d = c.getContext('2d').getImageData(0,0,c.width,c.height).data; let h = 0; for (let i=0;i<d.length;i+=7) h = (h*31+d[i])|0; return h; });
     const h0 = await hash();
-    const g = await p.$eval('#cvCv', e => { const r = e.getBoundingClientRect(); return { x:r.left, y:r.top, k:r.width/276 }; });
+    const g = await p.$eval('#cvCv', e => { e.scrollIntoView({ block:'center' }); const r = e.getBoundingClientRect(); return { x:r.left, y:r.top, k:r.width/276 }; });
     const at = (x,y) => [g.x+(16+x*256)*g.k, g.y+(4+(1-y)*256)*g.k];
     await p.mouse.move(...at(0.5,0.5)); await p.mouse.down(); await p.mouse.move(...at(0.5,0.62), { steps:5 }); await p.mouse.up(); await p.waitForTimeout(400);
     const h1 = await hash(), mod = await p.$eval('#cvChans button[data-ch=L]', e => e.classList.contains('mod'));
