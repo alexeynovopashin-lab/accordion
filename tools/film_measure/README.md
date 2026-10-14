@@ -13,3 +13,6 @@ Pipeline (each step is one script, run from the repo root; inputs live in `data/
 Needs: Python 3, numpy, scipy, opencv-python, Pillow, pypdf, poppler-utils. Results: `docs/experiments/`.
 Environment variables: `CHARTS_EXTRACT` (folder with extracted frames + `charts.icc`), `MIDDLEBURY` (checker140).
 Status: ran on 2026-10-13 on the author's data; `extract_pdfs.py` verified end to end on Charts page 2 (frame 3 in reading order = EV 0, bit-identical to the frames used in the tests).
+
+`atlas_ev0.py` — atlas step 1: one "0 EV" frame per film (12 films), both scanners; EV 0 = 1/125 × 400/ISO at f/4 (see the
+docstring); writes `data/derived/frontier_ev0_patches.csv` and `frontier_ev0_summary.csv`. Report: `docs/experiments/atlas_frontier_ev0.md`.
