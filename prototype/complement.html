@@ -193,6 +193,12 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
 /* curve tool: graph 256 px plot + 8 px axis strips */
 #cvCv{width:276px;height:276px;display:block;margin:0 auto;touch-action:none;cursor:crosshair;border-radius:8px;user-select:none}
 #img.curvepick{cursor:ns-resize}
+#img.hslpick{cursor:crosshair}
+#hsReachRow[hidden]{display:none}
+.hslsec{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.hslsec button{padding:7px 4px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:12px}
+.hslsec .sw{width:10px;height:10px;border-radius:50%;flex:none;box-shadow:0 0 0 1px var(--hair)}
+#hsPick[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
 .seg[hidden]{display:none}
 .seg button.mod::after{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;margin-left:5px;vertical-align:middle}
 .cvrow .btn{margin-left:auto}
@@ -353,6 +359,24 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
         </div>
         <div class="slider"><label for="sBase">Основная нота</label><output id="oBase"></output><input id="sBase" type="range" min="0" max="359" step="1"></div>
       </section>
+      <section class="panel" aria-label="Цвета" id="hslPanel">
+        <h2 title="HSL по восьми секторам круга. Стоит после аккорда и закреплений, до кривых. Кожа и нейтрали в секторы не попадают. Входит в LUT и снимок.">Цвета</h2>
+        <div class="seg hslsec" role="group" aria-label="Сектор" id="hsSecs"></div>
+        <div class="slider"><label for="sHsH" title="Поворот оттенка сектора. Если дальше оттенки сложились бы (соседние поменялись местами), сдвиг ограничивается — рядом видно, сколько действует">Оттенок</label><output id="oHsH"></output><input id="sHsH" type="range" min="-30" max="30" step="1"></div>
+        <div class="slider"><label for="sHsS" title="Насыщенность сектора: −100 — до порога серого, +100 — примерно вдвое">Насыщенность</label><output id="oHsS"></output><input id="sHsS" type="range" min="-100" max="100" step="1"></div>
+        <div class="slider"><label for="sHsL" title="Светлота сектора: ±100 — ±0.15 светлоты OkLab">Светлота</label><output id="oHsL"></output><input id="sHsL" type="range" min="-100" max="100" step="1"></div>
+        <div class="slider" id="hsReachRow"><label for="sHsR" title="Насколько широко «похоже на образец» — по оттенку, светлоте и насыщенности сразу">Охват</label><output id="oHsR"></output><input id="sHsR" type="range" min="0.5" max="2" step="0.05"></div>
+        <div class="btns">
+          <button class="btn" id="hsPick" type="button" aria-pressed="false" title="Пипетка: щёлкните по снимку. Сектор будет править только то, что похоже на образец по оттенку, светлоте и насыщенности">Образец</button>
+          <button class="btn" id="hsRefReset" type="button" title="Сектор снова работает по оттенку">Сбросить образец</button>
+          <button class="btn" id="hsReset" type="button" title="Все восемь секторов — к нулю, образцы убираются">Сбросить цвета</button>
+        </div>
+        <div class="kv" id="hsInfo"><span>—</span></div>
+        <label class="check"><input id="cHsMask" type="checkbox"> Показать, что захвачено</label>
+        <hr class="sep">
+        <div class="kv" id="hsKeep"><span>—</span></div>
+        <p class="note">Кожа и нейтрали — отдельные цвета: в секторы не попадают. Кожа правится в «Свет и кожа», граница серого — в «Что держать на месте» («Что считать серым»).</p>
+      </section>
       <section class="panel" aria-label="Движение" data-closed>
         <h2>Движение</h2>
         <div class="slider"><label for="sRotAll">Поворот всего аккорда</label><output id="oRotAll"></output><input id="sRotAll" type="range" min="-60" max="60" step="1"></div>
@@ -431,6 +455,7 @@ let markers = [];      // {type, x, y, idx:Int32Array}
 let NM = null;         // normalisation state, rebuilt by prepNorm()
 let PINS = [];         // harmony pins, rebuilt by prepPins()
 P.curves = defaultCurves();
+P.hsl = defaultHsl();
 const DEFAULTS = Object.assign({}, P);
 const MODE_S = { pair:0, split:30, triad:60 };
 
@@ -671,13 +696,130 @@ function xfPre(r,g,b,space){ // normalisation, chord and pins: OkLCh before curv
   if (C > 1e-5){ const n = normLch(L,C,h); h = transformHue(L,C,n[1]); C = n[0]; }
   return [L,C,h];
 }
+function xfMid(r,g,b,space){ // + HSL by sectors: what the curves see
+  const q = xfPre(r,g,b,space);
+  return HS.any ? hslStage(q[0], q[1], q[2]) : q;
+}
 function xf(r,g,b,space){
-  let [L,C,h] = xfPre(r,g,b,space);
+  let [L,C,h] = xfMid(r,g,b,space);
   if (CV.any){ const c = curveStages(L, C*Math.cos(h*D2R), C*Math.sin(h*D2R), space, null); L = c[0]; C = Math.hypot(c[1],c[2]); h = Math.atan2(c[2],c[1])/D2R; }
   const o = mapToGamut(L,C,h,space);
   return [toEnc(clamp01(o[0])), toEnc(clamp01(o[1])), toEnc(clamp01(o[2]))];
 }
-function prepAll(){ geometry(); prepNorm(); prepPins(); prepCurves(); }
+function prepAll(){ geometry(); prepNorm(); prepPins(); prepHsl(); prepCurves(); }
+/* ---------- colours: HSL by eight sectors of the OkLCh circle (after chord and pins, before curves and gamut mapping) ----------
+   Centres: OkLCh hues of sRGB red FF0000, orange FF8000, yellow FFFF00, green 00FF00, aqua 00FFFF, blue 0000FF, purple 8000FF,
+   magenta FF00FF. Without a sample a sector's weight falls from 1 at its centre to 0 at the neighbouring centres (smoothstep),
+   so the eight weights add up to 1. With a sample the weight is the smooth likeness to it in hue, lightness and chroma at once.
+   Weights of a pixel never add up to more than 1. Skin and neutrals are colours of their own: every weight is multiplied by
+   (1 − skin weight); hue and lightness also by the neutral protection wnAt(C), chroma moves by S·G(C) with G = ∫wnAt, so nothing
+   below the grey threshold moves and the chroma ramp keeps rising. Fold guard (hsGuard): each sector's shift, then all of them
+   together, is scaled down until along every grid line hue still rises with its input (slope ≥ 0.2) and chroma and lightness never fall (≥ 0.05). */
+const HS_SEC = [["red","Красный",[255,0,0]],["orange","Оранжевый",[255,128,0]],["yellow","Жёлтый",[255,255,0]],["green","Зелёный",[0,255,0]],
+  ["aqua","Аквамарин",[0,255,255]],["blue","Синий",[0,0,255]],["purple","Пурпурный",[128,0,255]],["magenta","Маджента",[255,0,255]]];
+const HS_C = HS_SEC.map(s => rgbToLch(s[2][0]/255, s[2][1]/255, s[2][2]/255).h);
+const HS_GAP = HS_C.map((c,i) => [wrap(c-HS_C[(i+7)%8]), wrap(HS_C[(i+1)%8]-c)]);   // to the previous and the next centre
+const HS_SH = 25, HS_SL = 0.15, HS_SC = 0.06;   // likeness at «Охват» 1: ±25° hue, ±0.15 L, ±0.06 C (OkLab)
+const HS_LMAX = 0.15, HS_SKF = 15;   // «Светлота» ±100 = ±0.15 L; skin hue falloff 15°
+const HS_SLOPE = { h:0.2, c:0.05, l:0.05 };   // guard: least slope left on the grid (hue must rise; chroma and lightness must not fall)
+function defaultHsl(){
+  const z = Object.freeze({ h:0, s:0, l:0, ref:null, reach:1 });
+  return Object.freeze({ sec:Object.freeze(new Array(8).fill(z)) });
+}
+const HW = new Float64Array(8);
+let HS = { src:null, any:false, skin:null, ref:[], h:new Float64Array(8), s:new Float64Array(8), l:new Float64Array(8), key:{} };
+function hsWeights(L,C,h,W){
+  let tot = 0;
+  for (let i=0;i<8;i++){
+    const r = HS.ref[i]; let w;
+    if (r){ const x = angDiff(h,r.h)/(HS_SH*r.reach), y = (L-r.L)/(HS_SL*r.reach), z = (C-r.C)/(HS_SC*r.reach), d = Math.sqrt(x*x+y*y+z*z); w = d>=1 ? 0 : 1-smooth(d); }
+    else { const d = angDiff(h, HS_C[i]), t = d>=0 ? d/HS_GAP[i][1] : -d/HS_GAP[i][0]; w = t>=1 ? 0 : 1-smooth(t); }
+    W[i] = w; tot += w;
+  }
+  if (tot > 1) for (let i=0;i<8;i++) W[i] /= tot;
+}
+function hsSkinZone(){ // the skin cloud as the HSL stage sees it (after chord and pins); without a skin marker — the table zone
+  if (srcData){
+    const idx = subsample(cloudOf("skin"), 1500), d = srcData.data, list = [];
+    for (const i of idx){ const p = i*4, q = xfPre(d[p]/255, d[p+1]/255, d[p+2]/255, "srgb"); if (q[1] > 0.008) list.push({ L:q[0], C:q[1], h:wrap(q[2]) }); }
+    if (list.length > 10){ const z = zoneStats(list); return { h:z.h, w:Math.max(4, Math.min(20, 1.5*z.sd+3)), Lmin:z.Lmin, Lmax:z.Lmax, Cmin:z.Cmin, Cmax:z.Cmax }; }
+  }
+  return { def:true, h:P.skinH, w:P.skinW };
+}
+function hsSkinW(L,C,h){ // pin-like window, softer towards higher chroma and both lightness ends: a gentler edge lets sectors move more
+  const z = HS.skin, wh = weight(angDiff(h, z.h), z.w, HS_SKF);
+  if (!wh) return 0;
+  if (z.def) return wh*pinWin(z, L, C);
+  return wh * smooth((C-(z.Cmin-0.03))/0.03) * (1-smooth((C-(z.Cmax+0.02))/0.12)) * smooth((L-(z.Lmin-0.15))/0.15) * (1-smooth((L-(z.Lmax+0.04))/0.12));
+}
+function hsG(C){ // ∫ wnAt: chroma above the grey threshold, ramped in smoothly
+  const a = P.neutral, b = P.neutral+0.012; if (C <= a) return 0;
+  const t = (C-a)/b; return t < 1 ? b*(t*t*t - t*t*t*t/2) : b/2 + (C-a-b);
+}
+function hslStage(L,C,h){
+  hsWeights(L,C,h,HW);
+  const m = 1-hsSkinW(L,C,h), wn = wnAt(C);
+  let dh = 0, ds = 0, dl = 0;
+  for (let i=0;i<8;i++){ const w = HW[i]; if (w){ dh += HS.h[i]*w; ds += HS.s[i]*w; dl += HS.l[i]*w; } }
+  return [L + dl*m*wn, C + ds*m*hsG(C), h + dh*m*wn];
+}
+const hsRange = (a, b, s) => { const o = []; for (let k=0; a+k*s <= b+1e-9; k++) o.push(a+k*s); return o; };
+const HS_GRID = {   // inner axis, outer lines; hue is cyclic
+  h: { xs:hsRange(0, 359, 1), cyc:true, outer:() => { const o = []; for (const L of hsRange(0.12, 0.92, 0.08)) for (const C of hsRange(0.008, 0.32, 0.016)) o.push([L,C]); return o; }, at:(o,x) => [o[0], o[1], x] },
+  c: { xs:hsRange(0, 0.34, 0.004), outer:() => { const o = []; for (const L of hsRange(0.12, 0.92, 0.08)) for (const h of hsRange(0, 355, 5)) o.push([L,h]); return o; }, at:(o,x) => [o[0], x, o[1]] },
+  l: { xs:hsRange(0.02, 1, 0.01), outer:() => { const o = []; for (const C of hsRange(0.008, 0.32, 0.016)) for (const h of hsRange(0, 350, 10)) o.push([C,h]); return o; }, at:(o,x) => [x, o[0], o[1]] }
+};
+/* amounts → amounts that cannot fold: per sector first, then all together */
+function hsGuard(axis, amt){
+  if (!amt.some(Boolean)) return amt.slice();
+  const GR = HS_GRID[axis], xs = GR.xs, n = xs.length, m = GR.cyc ? n : n-1, ax = axis==="h" ? 2 : axis==="c" ? 1 : 0;
+  const lines = GR.outer().map(o => xs.map(x => GR.at(o, x)));
+  // a sample's likeness is narrow: add lines through it and around it, so its edges never fall between grid lines
+  const OFF = [-0.9, -0.7, -0.5, -0.3, -0.1, 0.1, 0.3, 0.5, 0.7, 0.9];
+  for (const r of HS.ref) if (r) for (const u of OFF) for (const v of OFF){
+    const L = r.L+u*HS_SL*r.reach, C = Math.max(0.001, r.C+(axis==="h" ? v : u)*HS_SC*r.reach), h = r.h+v*HS_SH*r.reach;
+    lines.push(xs.map(x => axis==="h" ? [L, C, x] : axis==="c" ? [L, x, h] : [x, C, h]));
+  }
+  // the stage sees colours after skin correction and chord: along each input axis the other two may move too (skin chroma along
+  // the hue circle, chord hue along chroma and lightness). Guard those paths as well, in the input's own coordinates.
+  const skinAdj = NM && NM.skin && (P.skinCf!==1 || P.skinDh!==0), chord = G.rB!==0 || G.rO!==0 || G.sp!==0;
+  if (axis==="h" ? skinAdj : (skinAdj || chord))
+    for (const o of GR.outer()) lines.push(xs.map(x => { const [L,C,h] = GR.at(o, x), q = C > 1e-5 ? normLch(L,C,h) : [C,h]; return [L, q[0], C > 1e-5 ? transformHue(L,C,q[1]) : h]; }));
+  const NL = lines.length, N = NL*m, D = new Float32Array(8*N), g = new Float64Array(8*n);
+  lines.forEach((pts, li) => {
+    for (let k=0;k<n;k++){
+      const [L,C,h] = pts[k]; hsWeights(L,C,h,HW);
+      const f = (1-hsSkinW(L,C,h)) * (axis==="c" ? hsG(C) : wnAt(C));
+      for (let i=0;i<8;i++) g[i*n+k] = HW[i]*f;
+    }
+    for (let k=0;k<m;k++){
+      const a = pts[k][ax], b = pts[(k+1)%n][ax], d = Math.max(ax===2 ? angDiff(b,a) : b-a, 1e-6);
+      for (let i=0;i<8;i++) D[i*N+li*m+k] = (g[i*n+(k+1)%n]-g[i*n+k])/d;
+    }
+  });
+  const lim = 1-HS_SLOPE[axis], k8 = amt.map((a,i) => {
+    if (!a) return 0;
+    let worst = 0; for (let j=0;j<N;j++){ const v = a*D[i*N+j]; if (v < worst) worst = v; }
+    return worst < -lim ? lim/-worst : 1;
+  });
+  let worst = 0;
+  for (let j=0;j<N;j++){ let v = 0; for (let i=0;i<8;i++) if (k8[i]) v += k8[i]*amt[i]*D[i*N+j]; if (v < worst) worst = v; }
+  const k = worst < -lim ? lim/-worst : 1;
+  return amt.map((a,i) => a*k8[i]*k);
+}
+function prepHsl(){
+  const sec = P.hsl.sec;
+  HS.any = sec.some(s => s.h || s.s || s.l);
+  HS.skin = hsSkinZone();
+  HS.ref = sec.map(s => s.ref ? { L:s.ref.L, C:s.ref.C, h:s.ref.h, reach:s.reach } : null);
+  if (!HS.any) return;
+  const base = JSON.stringify([HS.skin, HS.ref, P.neutral, P.skinCf, P.skinDh, NM && NM.skin, P.mode, P.base, P.rotAll, P.rotOpp, P.spread, P.core, P.fall, P.skinLock, P.skinStr, PINS]);
+  for (const [ax, f] of [["h", s => s.h], ["s", s => s.s/100], ["l", s => s.l/100*HS_LMAX]]){
+    const amt = sec.map(f), key = base + JSON.stringify(amt);
+    if (HS.key[ax] === key) continue;
+    HS[ax] = Float64Array.from(hsGuard(ax==="s" ? "c" : ax, amt)); HS.key[ax] = key;
+  }
+}
 /* ---------- curves: LRGB, Lab, Soft (after chord and pins, before gamut mapping; stages run in tab order) ----------
    Points are [x,y] in 0..1 sorted by x. Interpolation: monotone cubic Hermite with Fritsch–Butland slopes (scipy PCHIP):
    no overshoot, so points that rise give a curve that rises. Flat beyond the end points (black/white point), slope 1 outside 0..1.
@@ -1043,6 +1185,7 @@ function render(){
   const lut = buildLUT(33, "srgb");
   applyLUT(srcData.data, outData.data, lut, 33);
   imgCtx.putImageData(P.view==="after" ? outData : srcData, 0, 0);
+  if (HUI.mask && !hsPanel.classList.contains("collapsed")) drawHslMask();
   if (P.clouds && overlay) imgCtx.drawImage(overlay, 0, 0);
   drawMarkers();
   lastMass = oppositeMass();
@@ -1051,6 +1194,7 @@ function render(){
   updateMeasure();
   drawWheel();
   if (!cvPanel.classList.contains("collapsed")){ curveHist(); drawCurve(); }
+  if (!hsPanel.classList.contains("collapsed")){ hslReadout(); syncHslUI(); }
 }
 /* ---------- normalisation readouts (Lab D50, as in Photoshop) ---------- */
 const f1 = v => (v<0?"−":"")+Math.abs(v).toFixed(1);
@@ -1215,6 +1359,7 @@ function syncUI(){
   press("n33",P.size===33); press("n65",P.size===65);
   geometry();
   syncCurveUI();
+  syncHslUI();
 }
 for (const [sid,,key] of sliders){
   $(sid).addEventListener("input", e => { P[key] = Number(e.target.value); syncUI(); schedule(); });
@@ -1229,7 +1374,7 @@ on("pLips", () => P.pick="lips"); on("pSky", () => P.pick="sky"); on("pFoliage",
 on("undo", () => histGo(-1)); on("redo", () => histGo(1));
 on("resetAll", () => {
   for (const k in DEFAULTS) if (!HIST_SKIP.has(k)) P[k] = DEFAULTS[k];
-  markers = []; rebuildOverlay(); renderChips();
+  markers = []; rebuildOverlay(); renderChips(); HUI.pick = false;
   setStatus("Всё сброшено: регуляторы в исходном положении, маркеров нет. Вернуть — «← Назад».");
 });
 document.addEventListener("keydown", e => {
@@ -1274,6 +1419,7 @@ imgCv.addEventListener("click", e => {
   if (dragMoved){ dragMoved = false; return; }
   const r = imgCv.getBoundingClientRect();
   const x = Math.floor((e.clientX-r.left)/r.width*imgCv.width), y = Math.floor((e.clientY-r.top)/r.height*imgCv.height);
+  if (HUI.pick){ hslTakeRef(x, y); syncUI(); commit(); schedule(); return; }
   if (P.pick!=="base"){
     if (addMarker(P.pick, x, y, false)){ rebuildOverlay(); renderChips(); commit(); schedule(); }
     return;
@@ -1313,6 +1459,7 @@ function cubeText(N, space){
     "# normalisation: neutralMarkers="+markers.filter(m=>m.type==="neutral").length+" wb="+P.wb+" skinChroma="+P.skinCf+" skinHue="+P.skinDh+" (LUT includes normalisation for this frame)",
     "LUT_3D_SIZE "+N, "DOMAIN_MIN 0 0 0", "DOMAIN_MAX 1 1 1"];
   if (CV.any) head.splice(4, 0, "# curves: "+curveSummary());
+  if (HS.any) head.splice(head.indexOf("LUT_3D_SIZE "+N), 0, "# hsl (requested>applied): "+hslSummary());
   const lines = new Array(N*N*N);
   for (let i=0,k=0;i<lines.length;i++,k+=3) lines[i] = lut[k].toFixed(6)+" "+lut[k+1].toFixed(6)+" "+lut[k+2].toFixed(6);
   return head.join("\n")+"\n"+lines.join("\n")+"\n";
@@ -1470,7 +1617,7 @@ function curveSummary(){
   }
   return out.join(" ");
 }
-function curveProbe(r,g,b){ const [L,C,h] = xfPre(r,g,b,"srgb"), pr = {}; curveStages(L, C*Math.cos(h*D2R), C*Math.sin(h*D2R), "srgb", pr); return pr; }
+function curveProbe(r,g,b){ const [L,C,h] = xfMid(r,g,b,"srgb"), pr = {}; curveStages(L, C*Math.cos(h*D2R), C*Math.sin(h*D2R), "srgb", pr); return pr; }
 function chanIn(pr, tab, ch){ return tab==="soft" ? pr.soft : tab==="lab" ? pr.lab["Lab".indexOf(ch)] : ch==="L" ? pr.lL : pr.rgb["RGB".indexOf(ch)]; }
 function curveHist(){
   if (!srcData || !samples.length){ cvHist = null; return; }
@@ -1633,6 +1780,111 @@ imgCv.addEventListener("pointermove", e => {
 const fEnd = () => { if (!CUI.fdrag) return; CUI.fdrag = null; commit(); syncUI(); schedule(); };
 imgCv.addEventListener("pointerup", fEnd); imgCv.addEventListener("pointercancel", fEnd);
 imgCv.addEventListener("pointerleave", () => { if (!CUI.fdrag && CUI.hover !== null){ CUI.hover = null; syncCurveUI(); } });
+
+/* ---------- colours panel: eight sectors, sample picker, «what is captured» mask ---------- */
+const hsPanel = $("hslPanel");
+const HUI = { sel:0, pick:false, mask:false };
+const hsSet = patch => {
+  const sec = P.hsl.sec.map((s,i) => i===HUI.sel ? Object.freeze({ ...s, ...patch }) : s);
+  P.hsl = Object.freeze({ sec:Object.freeze(sec) });
+};
+const hsMod = s => !!(s.h || s.s || s.l || s.ref);
+const hsHex = rgb => "#"+rgb.map(v => Math.round(v).toString(16).padStart(2,"0")).join("");
+const hsRefHex = r => hsHex(mapToGamut(r.L, r.C, r.h, "srgb").map(v => toEnc(clamp01(v))*255));
+$("hsSecs").innerHTML = HS_SEC.map(([k,name,rgb],i) => "<button type='button' data-i='"+i+"' title='"+name+": центр "+HS_C[i].toFixed(1)+"° OkLCh'><span class='sw'></span>"+name+"</button>").join("");
+const sgn = v => (v>0?"+":v<0?"−":"")+Math.abs(v);
+function syncHslUI(){
+  const sec = P.hsl.sec, s = sec[HUI.sel];
+  for (const b of $("hsSecs").children){
+    const i = +b.dataset.i;
+    b.setAttribute("aria-pressed", String(i===HUI.sel)); b.classList.toggle("mod", hsMod(sec[i]));
+    b.firstChild.style.background = sec[i].ref ? hsRefHex(sec[i].ref) : hsHex(HS_SEC[i][2]);
+  }
+  const eff = (ax, v, f) => { const e = HS.any ? HS[ax][HUI.sel]/f : v; return Math.abs(e-v) > 0.5 ? " → "+sgn(Math.round(e)) : ""; };
+  $("sHsH").value = s.h; $("oHsH").textContent = sgn(s.h)+"°"+eff("h", s.h, 1);
+  $("sHsS").value = s.s; $("oHsS").textContent = sgn(s.s)+eff("s", s.s, 0.01);
+  $("sHsL").value = s.l; $("oHsL").textContent = sgn(s.l)+eff("l", s.l, HS_LMAX/100);
+  $("sHsR").value = s.reach; $("oHsR").textContent = "×"+Number(s.reach).toFixed(2);
+  $("hsReachRow").hidden = !s.ref;
+  $("hsPick").setAttribute("aria-pressed", String(HUI.pick)); $("hsRefReset").disabled = !s.ref;
+  $("hsReset").disabled = !sec.some(hsMod);
+  $("cHsMask").checked = HUI.mask;
+  imgCv.classList.toggle("hslpick", HUI.pick);
+}
+for (const [id,key] of [["sHsH","h"],["sHsS","s"],["sHsL","l"],["sHsR","reach"]]){
+  $(id).addEventListener("input", e => { hsSet({ [key]:Number(e.target.value) }); syncUI(); schedule(); });
+  $(id).addEventListener("change", () => commit());
+}
+$("hsSecs").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; HUI.sel = +b.dataset.i; syncUI(); schedule(); });
+on("hsPick", () => {
+  HUI.pick = !HUI.pick;
+  if (HUI.pick){ CUI.mode = "graph"; setStatus("Образец для «"+HS_SEC[HUI.sel][1]+"»: щёлкните по снимку (берётся среднее 9×9 точек)."); }
+});
+on("hsRefReset", () => hsSet({ ref:null, reach:1 }));
+on("hsReset", () => { P.hsl = DEFAULTS.hsl; HUI.pick = false; });
+$("cHsMask").addEventListener("change", e => { HUI.mask = e.target.checked; schedule(); });
+/* the sample is read where the HSL stage reads it (after chord and pins), so editing the sector does not move it */
+function hslTakeRef(x, y){
+  const d = srcData.data, W = imgCv.width, H = imgCv.height; let L=0, a=0, b=0, n=0;
+  for (let yy=y-4; yy<=y+4; yy++) for (let xx=x-4; xx<=x+4; xx++){
+    if (xx<0 || yy<0 || xx>=W || yy>=H) continue;
+    const p = (yy*W+xx)*4, q = xfPre(d[p]/255, d[p+1]/255, d[p+2]/255, "srgb");
+    L += q[0]; a += q[1]*Math.cos(q[2]*D2R); b += q[1]*Math.sin(q[2]*D2R); n++;
+  }
+  if (!n) return;
+  L /= n; a /= n; b /= n;
+  const C = Math.hypot(a,b), h = wrap(Math.atan2(b,a)/D2R), name = HS_SEC[HUI.sel][1];
+  HUI.pick = false;
+  if (C < P.neutral+0.012){ setStatus("Образец почти серый (C "+C.toFixed(3)+"): нейтрали в секторы не попадают. Возьмите цветной участок."); return; }
+  hsSet({ ref:Object.freeze({ L, C, h }) });
+  const sk = hsSkinW(L, C, h);
+  setStatus("Образец для «"+name+"»: L "+L.toFixed(2)+" · C "+C.toFixed(3)+" · "+h.toFixed(0)+"° (OkLCh)"+(sk > 0.5 ? ". Он попал в зону кожи — кожа в секторы не попадает, править её здесь не выйдет." : "."));
+}
+/* the selected sector's weight as a mask: captured — in colour, the rest — dim grey */
+let hsMaskBuf = null;
+function hsWeightAt(q, i){ if (q[1] <= 1e-5) return 0; hsWeights(q[0], q[1], q[2], HW); return HW[i]*(1-hsSkinW(q[0], q[1], q[2]))*wnAt(q[1]); }
+function drawHslMask(){
+  const N = 33, n1 = N-1, lut = new Float32Array(N*N*N*3); let k = 0;
+  for (let b=0;b<N;b++) for (let g=0;g<N;g++) for (let r=0;r<N;r++){ const w = hsWeightAt(xfPre(r/n1, g/n1, b/n1, "srgb"), HUI.sel); lut[k++]=w; lut[k++]=w; lut[k++]=w; }
+  if (!hsMaskBuf || hsMaskBuf.width !== imgCv.width || hsMaskBuf.height !== imgCv.height) hsMaskBuf = imgCtx.createImageData(imgCv.width, imgCv.height);
+  applyLUT(srcData.data, hsMaskBuf.data, lut, N);
+  const s = (P.view==="after" ? outData : srcData).data, d = hsMaskBuf.data;
+  for (let p=0;p<d.length;p+=4){
+    const w = d[p]/255, y = (0.3*s[p]+0.59*s[p+1]+0.11*s[p+2])*0.3*(1-w);
+    d[p] = s[p]*w+y; d[p+1] = s[p+1]*w+y; d[p+2] = s[p+2]*w+y; d[p+3] = 255;
+  }
+  imgCtx.putImageData(hsMaskBuf, 0, 0);
+}
+function hslReadout(){
+  if (!srcData || !samples.length) return;
+  const d = srcData.data, i0 = HUI.sel, s = P.hsl.sec[i0]; let n = 0, nSk = 0, nNe = 0, nSel = 0;
+  for (const sm of samples){
+    const q = xfPre(d[sm.p]/255, d[sm.p+1]/255, d[sm.p+2]/255, "srgb"); n++;
+    if (q[1] > 1e-5 && hsSkinW(q[0], q[1], q[2]) >= 0.5) nSk++;
+    if (wnAt(q[1]) <= 0.5) nNe++;
+    if (hsWeightAt(q, i0) >= 0.5) nSel++;
+  }
+  const pc = v => (v/n*100).toFixed(v/n < 0.1 ? 1 : 0)+"%";
+  const from = wrap(HS_C[i0]-HS_GAP[i0][0]), to = wrap(HS_C[i0]+HS_GAP[i0][1]);
+  let html = s.ref ? HS_SEC[i0][1]+" по образцу: L "+s.ref.L.toFixed(2)+" · C "+s.ref.C.toFixed(3)+" · "+s.ref.h.toFixed(0)+"°"
+    : HS_SEC[i0][1]+": центр "+HS_C[i0].toFixed(0)+"°, сходит на нет к "+from.toFixed(0)+"° и "+to.toFixed(0)+"°";
+  html += "<br>Захвачено (вес ≥ 0.5): "+pc(nSel)+" кадра";
+  if (HS.any){
+    const cut = [];
+    if (Math.abs(HS.h[i0]-s.h) > 0.5) cut.push("оттенок");
+    if (Math.abs(HS.s[i0]*100-s.s) > 0.5) cut.push("насыщенность");
+    if (Math.abs(HS.l[i0]/HS_LMAX*100-s.l) > 0.5) cut.push("светлота");
+    if (cut.length) html += "<br><span>Ограничено ("+cut.join(", ")+"): дальше соседние цвета поменялись бы местами. Действующее значение — после стрелки.</span>";
+  }
+  $("hsInfo").innerHTML = html;
+  $("hsKeep").innerHTML = "Кожа: "+pc(nSk)+" кадра "+(HS.skin.def ? "<span>(маркера нет — зона по таблице, "+Math.round(HS.skin.h)+"° ±"+HS.skin.w+"°)</span>" : "<span>(по облаку маркера кожи)</span>")
+    + "<br>Нейтрали: "+pc(nNe)+" кадра <span>(хрома OkLab ниже "+(1.5*P.neutral+0.006).toFixed(3)+")</span>";
+}
+function hslSummary(){
+  return P.hsl.sec.map((s,i) => !hsMod(s) ? "" : HS_SEC[i][0]+"(h="+s.h+">"+HS.h[i].toFixed(1)+" s="+s.s+">"+(HS.s[i]*100).toFixed(0)+" l="+s.l+">"+(HS.l[i]/HS_LMAX*100).toFixed(0)
+    +(s.ref ? " ref=L"+s.ref.L.toFixed(3)+",C"+s.ref.C.toFixed(3)+",h"+s.ref.h.toFixed(1)+" reach="+s.reach : "")+")").filter(Boolean).join(" ");
+}
+new MutationObserver(() => schedule()).observe(hsPanel, { attributes:true, attributeFilter:["class"] });
 
 /* ---------- foldable panels ---------- */
 const FOLD_KEY = "harmony.folds2";   // v2: new default set of open plates (Light+skin, Curve, Circle, Chord)
