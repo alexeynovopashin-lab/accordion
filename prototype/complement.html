@@ -377,6 +377,17 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:2px 0}
         <div class="kv" id="hsKeep"><span>—</span></div>
         <p class="note">Кожа и нейтрали — отдельные цвета: в секторы не попадают. Кожа правится в «Свет и кожа», граница серого — в «Что держать на месте» («Что считать серым»).</p>
       </section>
+      <section class="panel" aria-label="Усреднение тонов" id="avgPanel">
+        <h2 title="Оставленные цвета стоят, остальные оттенки сдвигаются к ближайшему из них по кругу. Стоит после «Цветов», до кривых. Кожа и нейтрали не двигаются. Хрома и светлота не меняются. Входит в LUT и снимок.">Усреднение тонов</h2>
+        <p class="sub">Оставить</p>
+        <div class="seg hslsec" role="group" aria-label="Какие цвета оставить" id="avSecs"></div>
+        <div class="slider"><label for="sAvg" title="Насколько оттенки подтягиваются к оставленным. Если дальше оттенки сложились бы (соседние поменялись местами), сближение ограничивается — рядом видно, сколько действует">Сближение</label><output id="oAvg"></output><input id="sAvg" type="range" min="0" max="100" step="1"></div>
+        <div class="btns">
+          <button class="btn" id="avReset" type="button" title="Ничего не оставлено, сближение 0">Сбросить усреднение</button>
+        </div>
+        <div class="kv" id="avInfo"><span>—</span></div>
+        <p class="note">Оставленный оттенок — образец сектора из «Цветов», если он задан, иначе центр сектора (с поворотом, который «Цвета» дают этому сектору). Около него ±10° не двигается. Оттенок ровно посередине между двумя оставленными тоже стоит. Кожа и нейтрали не двигаются; оттенок кожи — граница: через него цвета не перетекают и к нему не тянутся.</p>
+      </section>
       <section class="panel" aria-label="Движение" data-closed>
         <h2>Движение</h2>
         <div class="slider"><label for="sRotAll">Поворот всего аккорда</label><output id="oRotAll"></output><input id="sRotAll" type="range" min="-60" max="60" step="1"></div>
@@ -456,6 +467,7 @@ let NM = null;         // normalisation state, rebuilt by prepNorm()
 let PINS = [];         // harmony pins, rebuilt by prepPins()
 P.curves = defaultCurves();
 P.hsl = defaultHsl();
+P.avgKeep = Object.freeze(new Array(8).fill(false)); P.avgAmt = 0;
 const DEFAULTS = Object.assign({}, P);
 const MODE_S = { pair:0, split:30, triad:60 };
 
@@ -696,9 +708,10 @@ function xfPre(r,g,b,space){ // normalisation, chord and pins: OkLCh before curv
   if (C > 1e-5){ const n = normLch(L,C,h); h = transformHue(L,C,n[1]); C = n[0]; }
   return [L,C,h];
 }
-function xfMid(r,g,b,space){ // + HSL by sectors: what the curves see
-  const q = xfPre(r,g,b,space);
-  return HS.any ? hslStage(q[0], q[1], q[2]) : q;
+function xfMid(r,g,b,space){ // + HSL by sectors + tone averaging: what the curves see
+  let q = xfPre(r,g,b,space);
+  if (HS.any) q = hslStage(q[0], q[1], q[2]);
+  return AV.on ? avgStage(q[0], q[1], q[2]) : q;
 }
 function xf(r,g,b,space){
   let [L,C,h] = xfMid(r,g,b,space);
@@ -706,7 +719,7 @@ function xf(r,g,b,space){
   const o = mapToGamut(L,C,h,space);
   return [toEnc(clamp01(o[0])), toEnc(clamp01(o[1])), toEnc(clamp01(o[2]))];
 }
-function prepAll(){ geometry(); prepNorm(); prepPins(); prepHsl(); prepCurves(); }
+function prepAll(){ geometry(); prepNorm(); prepPins(); prepHsl(); prepAvg(); prepCurves(); }
 /* ---------- colours: HSL by eight sectors of the OkLCh circle (after chord and pins, before curves and gamut mapping) ----------
    Centres: OkLCh hues of sRGB red FF0000, orange FF8000, yellow FFFF00, green 00FF00, aqua 00FFFF, blue 0000FF, purple 8000FF,
    magenta FF00FF. Without a sample a sector's weight falls from 1 at its centre to 0 at the neighbouring centres (smoothstep),
@@ -819,6 +832,106 @@ function prepHsl(){
     if (HS.key[ax] === key) continue;
     HS[ax] = Float64Array.from(hsGuard(ax==="s" ? "c" : ax, amt)); HS.key[ax] = key;
   }
+}
+/* ---------- tone averaging: hues move towards the nearest kept hue (after «Цвета», before curves and gamut mapping) ----------
+   Kept hue of a sector: the hue of its «Цвета» sample (as «Цвета» leaves it), else the sector centre plus the hue turn «Цвета» applies
+   to that sector. Each kept hue has a zone of ±AV_KEEP° (at most 0.45 of the way to the next kept hue) that does not move.
+   Between two zones lies an arc, u = 0…1 along it: u → u − cφ(u), φ = sin(2πu)·sin²(πu): flat at both zone edges, 0 at the watershed
+   u = ½ (a hue exactly halfway stays), towards the nearer kept hue (shortest way) elsewhere; c = 0.8/max φ′ = 0.8/(1.125π): slope 0.2…2.42.
+   The skin hue is a border (unless a kept hue is within AV_SKIN° of it): nothing crosses it and nothing is drawn to it. In the span that
+   holds it, hues whose shortest way to a kept hue crosses the skin zone stay; the others go to their kept hue by u → u ± cψ(u),
+   ψ = sin²(πu), c = 0.8/π (slope 0.2…1.8), flat at the kept zone, at the skin zone and at the watershed.
+   So at full strength and full weight the map's slope never drops below 0.2: no fold, and the fixed points stay. Weight × (1 − skin
+   weight) × wnAt(C), as in «Цвета»; chroma and lightness do not change. Fold guard (avGuard): the strength is scaled down until along
+   every hue line of the whole chain (skin correction, chord, pins, «Цвета», this stage) the stage's own slope stays ≥ 0.2. */
+const AV_KEEP = 10, AV_SKIN = 15, AV_C2 = 0.8/(1.125*Math.PI), AV_C1 = 0.8/Math.PI;
+let AV = { on:false, keep:[], skin:null, arcs:[], s:0, smax:1, key:"" };
+function avD(h){ // full-strength shift in degrees at stage-input hue h
+  const x = wrap(h);
+  for (const a of AV.arcs){
+    const t = wrap(x-a.a); if (t >= a.A) continue;
+    const u = t/a.A, su = Math.sin(Math.PI*u);
+    return a.dir === 0 ? -AV_C2*a.A*Math.sin(2*Math.PI*u)*su*su : a.dir*AV_C1*a.A*su*su;
+  }
+  return 0;
+}
+function avgStage(L,C,h){
+  const wn = wnAt(C); if (!wn) return [L,C,h];
+  const D = avD(h); if (!D) return [L,C,h];
+  return [L, C, h + AV.s*D*(1-hsSkinW(L,C,h))*wn];
+}
+function avKeepHues(){
+  const o = [];
+  P.avgKeep.forEach((k,i) => {
+    if (!k) return;
+    const r = P.hsl.sec[i].ref;
+    const h = r ? (HS.any ? hslStage(r.L, r.C, r.h)[2] : r.h) : HS_C[i] + (HS.any ? HS.h[i] : 0);
+    o.push({ i, h:wrap(h), ref:!!r });
+  });
+  return o;
+}
+function prepAvg(){
+  const keep = avKeepHues(), pts = [];
+  for (const k of keep.slice().sort((a,b) => a.h-b.h)) if (!pts.length || k.h-pts[pts.length-1] >= 0.5) pts.push(k.h);
+  if (pts.length > 1 && wrap(pts[0]-pts[pts.length-1]) < 0.5) pts.pop();
+  AV.keep = keep; AV.skin = null; AV.arcs = [];
+  AV.on = P.avgAmt > 0 && pts.length > 0;
+  if (!pts.length) return;
+  const sk = HS.skin;
+  if (!pts.some(h => Math.abs(angDiff(h, sk.h)) < AV_SKIN)) AV.skin = { h:wrap(sk.h), w:Math.max(4, Math.min(20, sk.w)) };
+  const n = pts.length;
+  for (let j=0;j<n;j++){   // span from one kept hue up to the next; t = 0…d along it
+    const k0 = pts[j], d = n===1 ? 360 : wrap(pts[(j+1)%n]-k0), w = Math.min(AV_KEEP, 0.45*d), m = d/2;
+    const arc = (t0, t1, dir) => { if (t1-t0 > 0.5) AV.arcs.push({ a:wrap(k0+t0), A:t1-t0, dir }); };
+    const ts = AV.skin ? wrap(AV.skin.h-k0) : -1;
+    if (!(ts > 0 && ts < d)){ arc(w, d-w, 0); continue; }
+    // skin inside the span: hues whose shortest way to a kept hue crosses the skin hue stay; the rest go to their kept hue
+    const lo = Math.max(w, ts-AV.skin.w), hi = Math.min(d-w, ts+AV.skin.w);
+    if (ts >= m){ arc(w, Math.min(m, lo), -1); arc(hi, d-w, 1); }
+    else { arc(w, lo, -1); arc(Math.max(m, hi), d-w, 1); }
+  }
+  if (!AV.on){ AV.s = 0; return; }
+  const key = JSON.stringify([AV.arcs, HS.any ? [Array.from(HS.h), Array.from(HS.s), Array.from(HS.l), HS.ref] : 0, HS.skin, P.neutral, P.skinCf, P.skinDh,
+    NM && NM.skin, P.mode, P.base, P.rotAll, P.rotOpp, P.spread, P.core, P.fall, P.skinLock, P.skinStr, PINS]);
+  if (AV.key !== key){ AV.smax = avGuard(); AV.key = key; }
+  AV.s = Math.min(P.avgAmt/100, AV.smax);
+}
+/* the largest strength at which, along every hue line of the whole chain, the stage's slope in its own input stays ≥ 0.2 */
+function avGuard(){
+  const xs = hsRange(0, 360, 0.5), n = xs.length, q = new Float64Array(n), e = new Float64Array(n);
+  let smax = Infinity;
+  for (const L of hsRange(0.12, 0.92, 0.08)) for (const C of hsRange(0.008, 0.32, 0.016)){
+    for (let k=0;k<n;k++){
+      const nl = normLch(L,C,xs[k]); let p = [L, nl[0], transformHue(L,C,nl[1])];
+      if (HS.any) p = hslStage(p[0], p[1], p[2]);
+      const wn = wnAt(p[1]);
+      q[k] = p[2]; e[k] = wn ? avD(p[2])*(1-hsSkinW(p[0], p[1], p[2]))*wn : 0;
+    }
+    for (let k=0;k<n-1;k++){ const dq = angDiff(q[k+1], q[k]), de = e[k+1]-e[k]; if (de < 0 && dq > 0) smax = Math.min(smax, 0.8*dq/-de); }
+  }
+  return smax;
+}
+/* hue spread of the frame without skin and neutrals: circular standard deviation, weighted by chroma × (1 − skin weight) × wnAt(C);
+   before = what enters this stage, after = what leaves it (same pixels, same weights). Also the mean distance to the nearest kept hue:
+   with two kept hues far apart the frame gets two clusters, which a single circular deviation reads poorly. */
+function avSpread(list){
+  const d = srcData.data; let sw = 0, x0 = 0, y0 = 0, x1 = 0, y1 = 0, n0 = 0, n1 = 0;
+  const near = h => AV.keep.length ? Math.min(...AV.keep.map(k => Math.abs(angDiff(h, k.h)))) : 0;
+  for (const p of list){
+    let q = xfPre(d[p]/255, d[p+1]/255, d[p+2]/255, "srgb"); if (HS.any) q = hslStage(q[0], q[1], q[2]);
+    const wn = wnAt(q[1]); if (!wn) continue;
+    const w = q[1]*(1-hsSkinW(q[0], q[1], q[2]))*wn; if (w <= 0) continue;
+    const o = AV.on ? avgStage(q[0], q[1], q[2]) : q;
+    sw += w; x0 += w*Math.cos(q[2]*D2R); y0 += w*Math.sin(q[2]*D2R); x1 += w*Math.cos(o[2]*D2R); y1 += w*Math.sin(o[2]*D2R);
+    n0 += w*near(q[2]); n1 += w*near(o[2]);
+  }
+  if (!sw) return null;
+  const sd = (x, y) => Math.sqrt(-2*Math.log(Math.min(1, Math.hypot(x, y)/sw)))/D2R;
+  return { before:sd(x0, y0), after:sd(x1, y1), nearBefore:n0/sw, nearAfter:n1/sw, w:sw };
+}
+function avgSummary(){
+  return "keep="+AV.keep.map(k => HS_SEC[k.i][0]+"@"+k.h.toFixed(1)+(k.ref ? "(sample)" : "")).join(",")
+    +(AV.skin ? " skinBorder@"+AV.skin.h.toFixed(1)+"±"+AV.skin.w.toFixed(0) : "")+" amt="+P.avgAmt+">"+Math.round(AV.s*100);
 }
 /* ---------- curves: LRGB, Lab, Soft (after chord and pins, before gamut mapping; stages run in tab order) ----------
    Points are [x,y] in 0..1 sorted by x. Interpolation: monotone cubic Hermite with Fritsch–Butland slopes (scipy PCHIP):
@@ -1195,6 +1308,7 @@ function render(){
   drawWheel();
   if (!cvPanel.classList.contains("collapsed")){ curveHist(); drawCurve(); }
   if (!hsPanel.classList.contains("collapsed")){ hslReadout(); syncHslUI(); }
+  if (!avPanel.classList.contains("collapsed")) avgReadout();
 }
 /* ---------- normalisation readouts (Lab D50, as in Photoshop) ---------- */
 const f1 = v => (v<0?"−":"")+Math.abs(v).toFixed(1);
@@ -1343,7 +1457,8 @@ const sliders = [
   ["sCore","oCore","core", v=>"±"+v+"°"], ["sFall","oFall","fall", v=>v+"°"],
   ["sNeutral","oNeutral","neutral", v=>"C "+Number(v).toFixed(3)], ["sSkinStr","oSkinStr","skinStr", v=>Math.round(v*100)+"%"],
   ["sWb","oWb","wb", v=>Math.round(v*100)+"%"], ["sSkinCf","oSkinCf","skinCf", v=>Math.round(v*100)+"%"],
-  ["sSkinDh","oSkinDh","skinDh", v=>(v>0?"+":v<0?"−":"")+Math.abs(v)+"°"]
+  ["sSkinDh","oSkinDh","skinDh", v=>(v>0?"+":v<0?"−":"")+Math.abs(v)+"°"],
+  ["sAvg","oAvg","avgAmt", v=>v+"%"+(AV.on && Math.round(AV.s*100) < v ? " → "+Math.round(AV.s*100)+"%" : "")]
 ];
 function syncUI(){
   for (const [sid,oid,key,f] of sliders){ $(sid).value = P[key]; $(oid).textContent = f(Number(P[key])); }
@@ -1360,6 +1475,7 @@ function syncUI(){
   geometry();
   syncCurveUI();
   syncHslUI();
+  syncAvgUI();
 }
 for (const [sid,,key] of sliders){
   $(sid).addEventListener("input", e => { P[key] = Number(e.target.value); syncUI(); schedule(); });
@@ -1460,6 +1576,7 @@ function cubeText(N, space){
     "LUT_3D_SIZE "+N, "DOMAIN_MIN 0 0 0", "DOMAIN_MAX 1 1 1"];
   if (CV.any) head.splice(4, 0, "# curves: "+curveSummary());
   if (HS.any) head.splice(head.indexOf("LUT_3D_SIZE "+N), 0, "# hsl (requested>applied): "+hslSummary());
+  if (AV.on) head.splice(head.indexOf("LUT_3D_SIZE "+N), 0, "# avg (requested>applied, %): "+avgSummary());
   const lines = new Array(N*N*N);
   for (let i=0,k=0;i<lines.length;i++,k+=3) lines[i] = lut[k].toFixed(6)+" "+lut[k+1].toFixed(6)+" "+lut[k+2].toFixed(6);
   return head.join("\n")+"\n"+lines.join("\n")+"\n";
@@ -1885,6 +2002,40 @@ function hslSummary(){
     +(s.ref ? " ref=L"+s.ref.L.toFixed(3)+",C"+s.ref.C.toFixed(3)+",h"+s.ref.h.toFixed(1)+" reach="+s.reach : "")+")").filter(Boolean).join(" ");
 }
 new MutationObserver(() => schedule()).observe(hsPanel, { attributes:true, attributeFilter:["class"] });
+
+/* ---------- tone averaging panel: which sectors stay, how strongly the rest come closer, hue spread before → after ---------- */
+const avPanel = $("avgPanel");
+$("avSecs").innerHTML = HS_SEC.map(([k,name],i) => "<button type='button' data-i='"+i+"' title='"+name+": оставить этот цвет'><span class='sw'></span>"+name+"</button>").join("");
+function syncAvgUI(){
+  for (const b of $("avSecs").children){
+    const i = +b.dataset.i, r = P.hsl.sec[i].ref;
+    b.setAttribute("aria-pressed", String(P.avgKeep[i]));
+    b.firstChild.style.background = r ? hsRefHex(r) : hsHex(HS_SEC[i][2]);
+    b.title = HS_SEC[i][1]+": "+(P.avgKeep[i] ? "оставлен" : "оставить этот цвет")+(r ? " (по образцу из «Цветов»)" : "");
+  }
+  $("avReset").disabled = !P.avgAmt && !P.avgKeep.some(Boolean);
+}
+$("avSecs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const i = +b.dataset.i; P.avgKeep = Object.freeze(P.avgKeep.map((k,j) => j===i ? !k : k));
+  syncUI(); commit(); schedule();
+});
+on("avReset", () => { P.avgKeep = DEFAULTS.avgKeep; P.avgAmt = 0; });
+function avgReadout(){
+  if (!srcData || !samples.length) return;
+  const f = v => v.toFixed(1)+"°";
+  let html = AV.keep.length ? "Оставлены: "+AV.keep.map(k => HS_SEC[k.i][1]+" "+k.h.toFixed(0)+"°"+(k.ref ? " (образец)" : "")).join(", ")
+    +(AV.skin ? "<br><span>Граница — оттенок кожи "+AV.skin.h.toFixed(0)+"° ±"+AV.skin.w.toFixed(0)+"°</span>" : "")
+    : "Ничего не оставлено — инструмент ничего не делает.";
+  const sp = avSpread(samples.map(s => s.p));
+  if (sp) html += "<br>Разброс оттенков"+(AV.on ? ": "+f(sp.before)+" → "+f(sp.after) : ": "+f(sp.before))
+    +" <span>(круговое ст. отклонение, вес — хрома; без кожи и нейтралей)</span>"
+    +(sp && AV.keep.length ? "<br>До ближайшего оставленного, в среднем: "+(AV.on ? f(sp.nearBefore)+" → "+f(sp.nearAfter) : f(sp.nearBefore)) : "");
+  if (AV.on && AV.s < P.avgAmt/100 - 0.005) html += "<br><span>Ограничено до "+Math.round(AV.s*100)+"%: дальше соседние оттенки поменялись бы местами.</span>";
+  $("avInfo").innerHTML = html;
+  $("oAvg").textContent = sliders.find(x => x[2]==="avgAmt")[3](P.avgAmt);
+}
+new MutationObserver(() => schedule()).observe(avPanel, { attributes:true, attributeFilter:["class"] });
 
 /* ---------- foldable panels ---------- */
 const FOLD_KEY = "harmony.folds2";   // v2: new default set of open plates (Light+skin, Curve, Circle, Chord)

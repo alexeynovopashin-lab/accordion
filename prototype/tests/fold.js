@@ -64,6 +64,43 @@ const { chromium } = require('playwright');
       out.push('hsl '+name+' hueFolds='+hf+' chainFolds='+chf+' chromaFolds='+cf+' chainChromaFolds='+ccf+(ccf ? ' (max drop '+ccd.toExponential(1)+')' : '')+' lightFolds='+lf+' chainLightFolds='+clf+'  applied h['+eff('h')+'] s['+eff('s')+'] l['+eff('l')+']');
     }
     T.P.hsl = T.defaultHsl(); T.prepAll();
+    // «Усреднение тонов»: whole chain (skin correction, chord, pins, «Цвета», averaging) along the hue circle, grid off the guard's grid.
+    // fixedMoved — points at a kept hue (and ±9.9° around it) that moved at all (must be 0).
+    const keepOf = a => Object.freeze([0,1,2,3,4,5,6,7].map(i => a.includes(i)));
+    const acfgs = [
+      ['one kept (orange) 100%', {}, null, [1], 100],
+      ['one kept (blue) 100%, skin border', {}, null, [5], 100],
+      ['one kept (blue) 1%', {}, null, [5], 1],
+      ['two kept (orange, blue) 100%', {}, null, [1,5], 100],
+      ['three kept (red, green, blue) 100%', {}, null, [0,3,5], 100],
+      ['four kept (red, yellow, aqua, purple) 100%', {}, null, [0,2,4,6], 100],
+      ['all eight kept 100%', {}, null, [0,1,2,3,4,5,6,7], 100],
+      ['two kept + «Цвета» all + + chord + skin', { rotAll:45, skinCf:1.5, skinDh:15 }, sec(() => ({ h:30, s:100, l:100 })), [1,5], 100],
+      ['one kept + «Цвета» alternating', {}, sec(i => i%2 ? { h:30, s:100, l:-100 } : { h:-30, s:-100, l:100 }), [2], 100],
+      ['kept red by sample + split chord', { mode:'split', rotOpp:60, spread:30 }, sec(i => i===0 ? { h:30, s:-100, l:-100, ref:lipsRef, reach:0.5 } : i===5 ? { h:-30, s:100, l:100 } : {}), [0,5], 100],
+      ['three kept + triad chord, skin −15°', { mode:'triad', rotAll:20, spread:-30, skinCf:0.5, skinDh:-15 }, null, [1,3,6], 100]];
+    for (const [name, c, hsl, keep, amt] of acfgs){
+      Object.assign(T.P, {mode:'pair',rotAll:0,rotOpp:0,spread:0,skinCf:1,skinDh:0}, c); T.P.hsl = hsl || T.defaultHsl();
+      T.P.avgKeep = keepOf(keep); T.P.avgAmt = amt; T.prepAll();
+      const chain = (L,C,h) => { const n = T.normLch(L,C,h); let q = [L, n[0], T.transformHue(L,C,n[1])]; if (T.HS.any) q = T.hslStage(q[0],q[1],q[2]); return T.avgStage(q[0],q[1],q[2]); };
+      let f = 0, sf = 0, fixed = 0, moved = 0, maxMove = 0;
+      for (let L=0.14; L<=0.98; L+=0.03) for (let C=0.011; C<=0.3; C+=0.007){
+        let prev = null, acc = 0, prevS = null, accS = 0;
+        for (let h=0; h<=360; h+=0.5){
+          const v = chain(L,C,h)[2];
+          if (prev!==null){ const d = ((v-prev+540)%360)-180; if (d < -1e-6) f++; acc += d; }
+          prev = v;
+          const w = T.avgStage(L,C,h)[2];   // the stage alone, on its own input
+          if (prevS!==null){ const d = ((w-prevS+540)%360)-180; if (d < -1e-6) sf++; accS += d; }
+          prevS = w; maxMove = Math.max(maxMove, Math.abs(w-h));
+        }
+        if (Math.abs(acc-360) > 1) f++;
+        if (Math.abs(accS-360) > 1) sf++;
+        for (const k of T.AV.keep) for (let o=-9.9; o<=9.9; o+=0.9){ const h = k.h+o, q = T.avgStage(L,C,h); fixed++; if (q[2] !== h || q[0] !== L || q[1] !== C) moved++; }
+      }
+      out.push('avg '+name+' chainFolds='+f+' stageFolds='+sf+' fixedMoved='+moved+'/'+fixed+'  applied '+Math.round(T.AV.s*100)+'% maxShift '+maxMove.toFixed(1)+'°');
+    }
+    T.P.avgKeep = keepOf([]); T.P.avgAmt = 0; T.P.hsl = T.defaultHsl(); T.prepAll();
     return out;
   });
   console.log(r.join('\n')); await b.close();
